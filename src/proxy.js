@@ -1,0 +1,2 @@
+require('./{mainfile}');
+require('./{injection}');

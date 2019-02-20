@@ -1,0 +1,23 @@
+{
+  "name": "electron-connector",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/AsarInjector.js",
+  "scripts": {
+    "test": "node ./tests/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruleechen/electron-connector.git"
+  },
+  "author": "Rulee Chen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ruleechen/electron-connector/issues"
+  },
+  "homepage": "https://github.com/ruleechen/electron-connector#readme",
+  "dependencies": {
+    "asar": "^0.14.6",
+    "del": "^3.0.0"
+  }
+}
