@@ -2,7 +2,7 @@
   "name": "electron-connector",
   "version": "1.0.0",
   "description": "",
-  "main": "src/AsarInjector.js",
+  "main": "index.js",
   "scripts": {
     "test": "node ./tests/index.js"
   },
