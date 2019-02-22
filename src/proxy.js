@@ -1,2 +1,1 @@
 require('./{mainfile}');
-require('./{injection}');
