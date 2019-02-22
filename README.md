@@ -7,17 +7,25 @@ A nodejs tool for injecting your electron logic into 3rd-party electron applicat
 $ yarn add electron-connector
 ```
 
-## Integrate
+## Programing
 ```js
+const path = require('path');
 const { AsarInjector } = require('electron-connector');
 
-const archive = 'C:/Program Files (x86)/xxx/resources/app.asar';
+const archive = 'C:/Program Files/xxx/resources/app.asar';
+const buildDir = path.resolve(__dirname, '../build/asar');
 
 const injector = new AsarInjector({
   archive,
-  buildDir: '...', // your temp folder for building
+  buildDir, // your temp folder for building
   injectionDir: '...', // your codebase folder for injecting
 });
 
-injector.inject();
+injector
+  .inject()
+  .then(() => {
+    console.log('Injected');
+  }).catch((err) => {
+    console.error(err);
+  });
 ```
