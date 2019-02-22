@@ -1,7 +1,7 @@
-const fs = require('fs');
 const path = require('path');
-const del = require('del');
 const asar = require('asar');
+const del = require('del');
+const fse = require('fs-extra');
 
 const backupNamePostfix = '_rcbak';
 const proxyFileName = 'ecproxy.js';
@@ -20,7 +20,7 @@ class AsarInjector {
     injectionDir = defaultInjectionDir,
     asarUnpack = defaultAsarUnpack,
   }) {
-    if (!fs.existsSync(archive)) {
+    if (!fse.existsSync(archive)) {
       throw new Error('Can not found asar archive');
     }
     const isBak = AsarInjector.isBackupFile(archive);
@@ -67,16 +67,16 @@ class AsarInjector {
   }
 
   backup() {
-    if (!fs.existsSync(this._asarBakSrc)) {
+    if (!fse.existsSync(this._asarBakSrc)) {
       // By default, dest is overwritten
-      fs.copyFileSync(this._asarSrc, this._asarBakSrc);
+      fse.copyFileSync(this._asarSrc, this._asarBakSrc);
     }
   }
 
   recover() {
-    if (fs.existsSync(this._asarBakSrc)) {
+    if (fse.existsSync(this._asarBakSrc)) {
       // By default, dest is overwritten
-      fs.copyFileSync(this._asarBakSrc, this._asarSrc);
+      fse.copyFileSync(this._asarBakSrc, this._asarSrc);
     }
   }
 
@@ -93,16 +93,16 @@ class AsarInjector {
       throw new Error('Error as already injected');
     }
     // write proxy file
-    let proxyContent = fs.readFileSync(this._proxyFile, { encoding: 'utf8' });
+    let proxyContent = fse.readFileSync(this._proxyFile, { encoding: 'utf8' });
     proxyContent = proxyContent.replace('{mainfile}', packageJson.main);
     proxyContent = proxyContent.replace('{injection}', injectionDirName);
-    fs.writeFileSync(path.resolve(this._appBuildDir, `./${proxyFileName}`), proxyContent);
+    fse.writeFileSync(path.resolve(this._appBuildDir, `./${proxyFileName}`), proxyContent);
     // write injection dir
     const injectionDest = path.resolve(this._appBuildDir, `./${injectionDirName}`);
-    fs.copyFileSync(this._injectionDir, injectionDest);
+    fse.copySync(this._injectionDir, injectionDest, { recursive: true, overwrite: true });
     // update main
     packageJson.main = proxyFileName;
-    fs.writeFileSync(packageJsonFile, JSON.stringify(packageJson, null, 2), { overwrite: true });
+    fse.writeFileSync(packageJsonFile, JSON.stringify(packageJson, null, 2), { overwrite: true });
     // backup if needed
     this.backup();
     // pack asar
