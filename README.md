@@ -12,9 +12,12 @@ $ yarn add electron-connector
 const path = require('path');
 const { AsarInjector } = require('electron-connector');
 
-const archive = 'C:/Users/xxxx/AppData/Local/Microsoft/Teams/current/resources/app.asar'; // (required) the target asar
-const injectionSrc = path.resolve(__dirname, './injection'); // (required) your codebase (file or folder) for injecting
-const buildDir = path.resolve(__dirname, '../build'); // (optional) your temp folder for building
+// (required) the target asar
+const archive = 'C:/Users/xxxx/AppData/Local/Microsoft/Teams/current/resources/app.asar';
+// (required) your codebase (file or folder) for injecting
+const injectionSrc = path.resolve(__dirname, './injection');
+// (optional) your temp folder for building
+const buildDir = path.resolve(__dirname, '../build');
 
 const injector = new AsarInjector({
   archive,
@@ -23,10 +26,9 @@ const injector = new AsarInjector({
 
 injector
   .inject(injectionSrc)
-  .then(() => {
-    console.log('Injected');
+  .then((res) => {
+    console.log(res);
   }).catch((err) => {
     console.error(err);
   });
-
 ```
