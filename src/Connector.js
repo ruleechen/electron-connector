@@ -14,6 +14,7 @@ class Connector {
     return {
       brandCode: 'ec',
       brandAppId: 'com.electronconnector.default',
+      networkPort: 13110,
       buildEnv: 'dev',
       buildEnvs: [
         'dev',
@@ -23,12 +24,12 @@ class Connector {
     };
   }
 
-  get appPath() {
+  get src() {
     return path.resolve(__dirname, '../app');
   }
 
-  get brandInfoPath() {
-    return path.resolve(this.appPath, './brand.json')
+  get brandDest() {
+    return path.resolve(this.src, './brand.json')
   }
 
   get brandInfo() {
@@ -36,7 +37,7 @@ class Connector {
   }
 
   install() {
-    const cmd = `cd '${this.appPath}' && yarn install`;
+    const cmd = `cd '${this.src}' && yarn install`;
     cp.execSync(cmd, { stdio: 'inherit' });
   }
 
@@ -50,6 +51,9 @@ class Connector {
     if (!brandInfo.brandAppId) {
       throw new Error('brandAppId is required');
     }
+    if (!brandInfo.networkPort) {
+      throw new Error('networkPort is required');
+    }
     if (!Array.isArray(brandInfo.buildEnvs)) {
       throw new Error('buildEnvs is incorrect');
     }
@@ -58,11 +62,11 @@ class Connector {
     }
     this._brandInfo = brandInfo;
     // clear
-    fse.ensureDirSync(this.appPath);
-    del.sync([this.brandInfoPath]);
+    fse.ensureDirSync(this.src);
+    del.sync([this.brandDest]);
     // build
     fse.writeFileSync(
-      this.brandInfoPath,
+      this.brandDest,
       JSON.stringify(this._brandInfo, null, 2)
     );
   }

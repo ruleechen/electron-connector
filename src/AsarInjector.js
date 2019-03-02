@@ -139,6 +139,7 @@ class AsarInjector {
         unpack: this._asarUnpack,
       }, (err) => {
         if (err) {
+          this.recover();
           reject(err);
           return;
         }
@@ -156,7 +157,7 @@ class AsarInjector {
       throw new Error('connector type incorrect');
     }
     connector.install();
-    return this.inject(connector.appPath);
+    return this.inject(connector.src);
   }
 }
 
