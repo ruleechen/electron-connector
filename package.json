@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "install": "cd app && yarn install",
     "test": "node ./tests/index.js"
   },
   "repository": {

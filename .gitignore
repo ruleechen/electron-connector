@@ -61,4 +61,6 @@ typings/
 .next
 
 # custom
+.DS_Store
 /build
+/app/brand.json

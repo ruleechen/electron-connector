@@ -1,0 +1,17 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "electron-log": "^3.0.1",
+    "electron-store": "^2.0.0",
+    "node-ipc": "^9.1.1",
+    "uuid": "^3.3.2"
+  }
+}

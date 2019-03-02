@@ -3,6 +3,7 @@ const path = require('path');
 const asar = require('asar');
 const del = require('del');
 const fse = require('fs-extra');
+const Connector = require('./Connector');
 
 const backupNamePostfix = '_rcbak';
 const appBuildDirName = 'ec-asar';
@@ -79,7 +80,7 @@ class AsarInjector {
 
   inject(injectionSrc) {
     return new Promise((resolve, reject) => {
-      // recover if needed
+      // recover if backup available
       this.recover();
 
       // extract asar
@@ -90,7 +91,7 @@ class AsarInjector {
       const packageJsonFile = path.resolve(this._appBuildDir, './package.json');
       const packageJson = require(packageJsonFile);
       if (packageJson.main === this._proxyNameDest) {
-        reject(Error('Proxy entry already exists'));
+        reject(new Error(`Proxy entry already exists '${packageJson.main}'`));
         return;
       }
 
@@ -99,7 +100,7 @@ class AsarInjector {
       proxyContent = proxyContent.replace('{mainfile}', packageJson.main);
 
       // proxy content 2
-      const injectionBaseName = path.basename(injectionSrc);
+      const injectionBaseName = `ec_${path.basename(injectionSrc)}`;
       const injectionLine = `require('./${injectionBaseName}');`
       if (proxyContent.toLowerCase().indexOf(injectionLine.toLowerCase()) === -1) {
         proxyContent += `${injectionLine}${os.EOL}`;
@@ -108,14 +109,14 @@ class AsarInjector {
       // detect proxy file dest
       const proxyFileDest = path.resolve(this._appBuildDir, `./${this._proxyNameDest}`);
       if (fse.existsSync(proxyFileDest)) {
-        reject(Error('Proxy file already exists'));
+        reject(new Error(`Proxy file already exists '${this._proxyNameDest}'`));
         return;
       }
 
       // detect injection dest
       const injectionDest = path.resolve(this._appBuildDir, `./${injectionBaseName}`);
       if (fse.pathExistsSync(injectionDest)) {
-        reject(Error('Injection source already exists'));
+        reject(new Error(`Injection source already exists '${injectionBaseName}'`));
         return;
       }
 
@@ -148,6 +149,14 @@ class AsarInjector {
         });
       });
     });
+  }
+
+  injectConnector(connector) {
+    if (!(connector instanceof Connector)) {
+      throw new Error('connector type incorrect');
+    }
+    connector.install();
+    return this.inject(connector.appPath);
   }
 }
 
