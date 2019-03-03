@@ -4,14 +4,16 @@ const ipc = require('node-ipc');
 class IpcEmitter extends EventEmitter {
   constructor({
     networkPort,
+    silent = true,
+    timeout = 5 * 1000,
   }) {
     super();
+    this._timeout = timeout;
     this._ipcId = `ec-${networkPort}`;
     Object.assign(ipc.config, {
       id: this._ipcId,
-      retry: 1500,
       networkPort,
-      silent: true,
+      silent,
     });
   }
 
@@ -32,9 +34,9 @@ class IpcEmitter extends EventEmitter {
         }
       }, payload);
       timeoutId = setTimeout(() => {
-        reject('timeout');
         timeoutId = true;
-      }, 15 * 1000);
+        reject('timeout');
+      }, this._timeout);
     });
   }
 
@@ -60,24 +62,39 @@ class IpcEmitter extends EventEmitter {
     console.info('[ipc] server started');
   }
 
-  sendCommand({ commandLine }) {
+  sendCommand({
+    action,
+    ...payload
+  }) {
     return new Promise((resolve, reject) => {
+      let timeoutId;
       ipc.connectTo(this._ipcId, () => {
         const server = ipc.of[this._ipcId];
         server.on('connect', () => {
-          server.emit('command-line', {
-            commandLine,
-          });
-          server.on('message', (data) => {
-            ipc.disconnect(this._ipcId);
-            resolve(data);
-          });
-          server.on('error', (error) => {
-            ipc.disconnect(this._ipcId);
-            reject(error);
-          });
+          if (timeoutId !== true) {
+            clearTimeout(timeoutId);
+            server.emit('command-line', {
+              action,
+              ...payload,
+            });
+            server.on('message', (data) => {
+              ipc.disconnect(this._ipcId);
+              resolve(data);
+            });
+            server.on('error', (error) => {
+              ipc.disconnect(this._ipcId);
+              reject(error);
+            });
+          }
         });
       });
+      timeoutId = setTimeout(() => {
+        timeoutId = true;
+        reject({
+          error: 'timeout',
+          success: false,
+        });
+      }, this._timeout);
     });
   }
 

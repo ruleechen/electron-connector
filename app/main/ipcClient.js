@@ -11,10 +11,8 @@ function init({
   // heartbeat
   setInterval(() => {
     ipc.sendCommand({
-      commandLine: {
-        action: 'heartbeat',
-        ecnow: Date.now(),
-      }
+      action: 'heartbeat',
+      ecnow: Date.now(),
     }).catch((error) => {
       console.error(error);
     });
@@ -26,7 +24,7 @@ function init({
   }) => {
     if (callbackId) {
       ipc.sendCommand({
-        commandLine: payload,
+        ...payload,
       }).then((res) => {
         event.sender.send(callbackId, res);
       }).catch((error) => {
