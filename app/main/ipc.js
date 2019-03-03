@@ -42,7 +42,7 @@ class IpcEmitter extends EventEmitter {
 
   startListener() {
     ipc.serve(() => {
-      ipc.server.on('command-line', ({ commandLine }, socket) => {
+      ipc.server.on('command-line', (commandLine, socket) => {
         this.emitCommand(commandLine).then((res) => {
           ipc.server.emit(socket, 'message', res || {
             success: true,

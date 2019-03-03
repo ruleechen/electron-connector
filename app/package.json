@@ -9,8 +9,6 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "electron-log": "^3.0.1",
-    "electron-store": "^2.0.0",
     "node-ipc": "^9.1.1",
     "uuid": "^3.3.2"
   }
