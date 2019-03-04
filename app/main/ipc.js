@@ -1,13 +1,11 @@
-const EventEmitter = require('events');
 const ipc = require('node-ipc');
 
-class IpcEmitter extends EventEmitter {
+class IpcEmitter {
   constructor({
     networkPort,
     silent = true,
     timeout = 5 * 1000,
   }) {
-    super();
     this._timeout = timeout;
     this._ipcId = `ec-${networkPort}`;
     Object.assign(ipc.config, {
@@ -17,52 +15,7 @@ class IpcEmitter extends EventEmitter {
     });
   }
 
-  emitCommand({
-    action,
-    ...payload
-  }) {
-    return new Promise((resolve, reject) => {
-      let timeoutId;
-      this.emit(action, (res) => {
-        if (timeoutId !== true) {
-          clearTimeout(timeoutId);
-          if (res instanceof Error) {
-            reject(res);
-          } else {
-            resolve(res);
-          }
-        }
-      }, payload);
-      timeoutId = setTimeout(() => {
-        timeoutId = true;
-        reject('timeout');
-      }, this._timeout);
-    });
-  }
-
-  startListener() {
-    ipc.serve(() => {
-      ipc.server.on('command-line', (commandLine, socket) => {
-        this.emitCommand(commandLine).then((res) => {
-          ipc.server.emit(socket, 'message', res || {
-            success: true,
-          });
-        }).catch((err) => {
-          ipc.server.emit(socket, 'message', {
-            error: err && err.toString(),
-            success: false,
-          });
-        });
-      });
-      ipc.server.on('error', (error) => {
-        console.error(`[ipc] ${error}`);
-      });
-    });
-    ipc.server.start();
-    console.info('[ipc] server started');
-  }
-
-  sendCommand({
+  send({
     action,
     ...payload
   }) {
@@ -73,13 +26,16 @@ class IpcEmitter extends EventEmitter {
         server.on('connect', () => {
           if (timeoutId !== true) {
             clearTimeout(timeoutId);
-            server.emit('command-line', {
-              action,
+            server.emit(action, {
               ...payload,
             });
-            server.on('message', (data) => {
+            server.on(`${action}_cb`, (data) => {
               ipc.disconnect(this._ipcId);
-              resolve(data);
+              if (data && (data.error || data.success === false)) {
+                reject(data);
+              } else {
+                resolve(data);
+              }
             });
             server.on('error', (error) => {
               ipc.disconnect(this._ipcId);
@@ -98,11 +54,47 @@ class IpcEmitter extends EventEmitter {
     });
   }
 
+  on(action, handler) {
+    ipc.serve(() => {
+      ipc.server.on(action, (payload, socket) => {
+        const callback = (res) => {
+          try {
+            ipc.server.emit(socket, `${action}_cb`, res || {
+              success: true,
+            });
+          } catch (ex) {
+            // ignore
+          }
+        };
+        try {
+          handler({
+            payload,
+            callback,
+          });
+        } catch (err) {
+          callback({
+            error: err && err.toString(),
+            success: false,
+          });
+        }
+      });
+    });
+  }
+
+  start() {
+    if (ipc.server) {
+      ipc.server.start();
+      console.info('[ipc] server started');
+      ipc.server.on('error', (error) => {
+        console.error(`[ipc server] ${error}`);
+      });
+    }
+  }
+
   destroy() {
-    this.removeAllListeners();
     if (ipc.server) {
       ipc.server.stop();
-      console.info('[ipc] server stopped');
+      console.info('[ipc server] stopped');
     }
   }
 

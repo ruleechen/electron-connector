@@ -10,7 +10,7 @@ function init({
 
   // heartbeat
   setInterval(() => {
-    ipc.sendCommand({
+    ipc.send({
       action: 'heartbeat',
       ecnow: Date.now(),
     }).catch((error) => {
@@ -23,7 +23,7 @@ function init({
     ...payload
   }) => {
     if (callbackId) {
-      ipc.sendCommand({
+      ipc.send({
         ...payload,
       }).then((res) => {
         event.sender.send(callbackId, res);

@@ -55,9 +55,9 @@ function init({
     networkPort,
   });
 
-  ipc.startListener();
+  ipc.start();
 
-  ipc.on('getWindows', (callback) => {
+  ipc.on('getWindows', ({ callback }) => {
     const windowIds = [];
     electron.BrowserWindow.getAllWindows().forEach((win) => {
       if (!win || win.isDestroyed()) {
@@ -86,7 +86,13 @@ function init({
     return win;
   }
 
-  ipc.on('inspect', (callback, { windowId, mode }) => {
+  ipc.on('inspect', ({
+    callback,
+    payload: {
+      windowId,
+      mode,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.openDevTools({
@@ -98,7 +104,13 @@ function init({
     }
   });
 
-  ipc.on('executeJavaScript', (callback, { windowId, scriptContent }) => {
+  ipc.on('executeJavaScript', ({
+    callback,
+    payload: {
+      windowId,
+      scriptContent,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       const scripts = [
@@ -113,7 +125,13 @@ function init({
     }
   });
 
-  ipc.on('insertCSS', (callback, { windowId, cssContent }) => {
+  ipc.on('insertCSS', ({
+    callback,
+    payload: {
+      windowId,
+      cssContent,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.insertCSS(cssContent).then(() => {
