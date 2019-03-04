@@ -82,13 +82,13 @@ class IpcEmitter {
   }
 
   start() {
-    if (ipc.server) {
+    ipc.serve(() => {
       ipc.server.start();
       console.info('[ipc] server started');
       ipc.server.on('error', (error) => {
         console.error(`[ipc server] ${error}`);
       });
-    }
+    });
   }
 
   destroy() {
