@@ -3,7 +3,7 @@ const ipc = require('node-ipc');
 class IpcEmitter {
   constructor({
     networkPort,
-    silent = true,
+    silent = false,
     timeout = 5 * 1000,
   }) {
     this._timeout = timeout;
@@ -82,13 +82,13 @@ class IpcEmitter {
   }
 
   start() {
-    ipc.serve(() => {
+    if (ipc.server) {
       ipc.server.start();
       console.info('[ipc] server started');
       ipc.server.on('error', (error) => {
         console.error(`[ipc server] ${error}`);
       });
-    });
+    }
   }
 
   destroy() {
