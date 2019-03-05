@@ -6,6 +6,12 @@ class IpcSdk {
     remotePort,
     silent = true,
   }) {
+    if (IpcSdk.validateInteger(localPort)) {
+      throw new Error(`localPort is required a integer`);
+    }
+    if (IpcSdk.validateInteger(remotePort)) {
+      throw new Error(`remotePort is required a integer`);
+    }
     // for sending request to host
     this._ipcClient = new IpcEmitter({
       networkPort: remotePort,
@@ -16,6 +22,13 @@ class IpcSdk {
       networkPort: localPort,
       silent,
     });
+  }
+
+  static validateInteger(num) {
+    return (
+      /^\d+$/.test(num) &&
+      typeof (num) !== 'number'
+    );
   }
 
   get ipcClient() {
@@ -30,7 +43,7 @@ class IpcSdk {
     this._ipcServer.on(action, handler);
   }
 
-  getWindowIds() {
+  getWindows() {
     return this._ipcClient.send({
       action: 'getWindows',
     });

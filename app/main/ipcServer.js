@@ -78,15 +78,17 @@ function init({
   ipc.on('getWindows', ({
     callback,
   }) => {
-    const windowIds = [];
+    const wins = [];
     electron.BrowserWindow.getAllWindows().forEach((win) => {
       if (win && !win.isDestroyed()) {
-        windowIds.push(win.id);
+        windowIds.push({
+          id: win.id,
+          title: win.getTitle(),
+          bounds: win.getBounds(),
+        });
       }
     });
-    callback({
-      windowIds,
-    });
+    callback(wins);
   });
 
   function findWindow(callback, windowId) {
