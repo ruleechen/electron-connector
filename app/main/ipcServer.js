@@ -7,7 +7,7 @@ function _ec_sendBack({
   channel = 'perf',
   payload = {},
   resolve: resolveFn = res => res,
-  timeout = 5 * 1000,
+  timeout = 10 * 1000,
 }) {
   const ipcRenderer = window.electronSafeIpc;
   return new Promise((resolve, reject) => {
@@ -46,6 +46,27 @@ function _ec_sendBack({
   });
 };
 `;
+
+function _ec_query_tpl(queryId) {
+  return `
+    (function() {
+      const query = _ec_query();
+      Promise.resolve(query).then((data) => (
+        _ec_sendBack({
+          payload: {
+            ...data,
+            action: '_ec_query',
+            queryId: '${queryId}',
+          },
+        })
+      )).then((res) => {
+        console.log(res);
+      }).catch((err) => {
+        console.error(err);
+      });
+    })();
+  `;
+}
 
 function init({
   networkPort,
@@ -137,6 +158,60 @@ function init({
           inserted: true,
         });
       });
+    }
+  });
+
+  const queryContexts = {};
+
+  electron.ipcMain.on('perf', (event, {
+    action,
+    queryId,
+    callbackId,
+    ...payload
+  }) => {
+    if (
+      action === '_ec_query'
+      && queryId && callbackId
+    ) {
+      const query = queryContexts[queryId];
+      if (query) {
+        delete queryContexts[queryId];
+        clearTimeout(query.timeoutId);
+        query.callback(payload);
+      }
+      event.sender.send(callbackId, {
+        success: true,
+      });
+    }
+  });
+
+  ipc.on('scriptQuery', ({
+    callback,
+    payload: {
+      windowId,
+      scriptContent,
+    },
+  }) => {
+    const win = findWindow(callback, windowId);
+    if (win) {
+      // timeout
+      const queryId = Math.random().toString().substr(2);
+      const timeoutId = setTimeout(() => {
+        delete queryContexts[queryId];
+        callback(new Error('timeout'));
+      }, 10 * 1024);
+      // context cache
+      queryContexts[queryId] = {
+        callback,
+        timeoutId,
+      };
+      // execute script
+      const scripts = [
+        _ec_sendBack,
+        scriptContent,
+        _ec_query_tpl(queryId),
+      ];
+      win.webContents.executeJavaScript(scripts.join(os.EOL));
     }
   });
 

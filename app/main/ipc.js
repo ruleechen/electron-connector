@@ -89,12 +89,17 @@ class IpcEmitter extends EventEmitter {
         callbackId,
         ...payload
       }, socket) => {
-        const callback = (res) => {
+        const callback = (data) => {
           try {
-            ipc.server.emit(socket, callbackId, res || {
-              action,
-              success: true,
-            });
+            let res = data;
+            if (res instanceof Error) {
+              res = {
+                action,
+                error: res.toString(),
+                success: false,
+              };
+            }
+            ipc.server.emit(socket, callbackId, res);
           } catch (ex) {
             // ignore
           }
