@@ -7,7 +7,7 @@ function _ec_sendBack({
   channel = 'perf',
   payload = {},
   resolve: resolveFn = res => res,
-  timeout = 5 * 1000,
+  timeout = 10 * 1000,
 }) {
   const ipcRenderer = window.electronSafeIpc;
   return new Promise((resolve, reject) => {
@@ -34,18 +34,39 @@ function _ec_sendBack({
     if (timeout > 0) {
       timeoutId = setTimeout(() => {
         ipcRenderer.emit(callbackId, null, {
-          error: '[' + payload.action + '] timeout ' + timeout + 'ms',
+          error: 'timeout ' + timeout + 'ms',
           success: false,
         });
       }, timeout);
     }
     ipcRenderer.send(channel, {
       ...payload,
-      callbackId,
+      _callback_id: callbackId,
     });
   });
 };
 `;
+
+function _ec_query_tpl(queryId) {
+  return `
+    (function() {
+      const query = _ec_query();
+      Promise.resolve(query).then((data) => (
+        _ec_sendBack({
+          payload: {
+            ...data,
+            _action: '_ec_query',
+            _query_id: '${queryId}',
+          },
+        })
+      )).then((res) => {
+        console.log(res);
+      }).catch((err) => {
+        console.error(err);
+      });
+    })();
+  `;
+}
 
 function init({
   networkPort,
@@ -63,7 +84,9 @@ function init({
         windowIds.push(win.id);
       }
     });
-    callback(windowIds);
+    callback({
+      windowIds,
+    });
   });
 
   function findWindow(callback, windowId) {
@@ -83,16 +106,17 @@ function init({
     callback,
     payload: {
       windowId,
-      mode,
+      mode = 'detach',
     },
   }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.openDevTools({
-        mode: mode || 'detach',
+        mode,
       });
       callback({
         windowId,
+        devTools: mode,
       });
     }
   });
@@ -113,6 +137,7 @@ function init({
       win.webContents.executeJavaScript(scripts.join(os.EOL)).then(() => {
         callback({
           windowId,
+          executed: true,
         });
       });
     }
@@ -130,8 +155,63 @@ function init({
       win.webContents.insertCSS(cssContent).then(() => {
         callback({
           windowId,
+          inserted: true,
         });
       });
+    }
+  });
+
+  const queryContexts = {};
+
+  electron.ipcMain.on('perf', (event, {
+    _action,
+    _query_id,
+    _callback_id,
+    ...payload
+  }) => {
+    if (
+      _action === '_ec_query'
+      && _query_id && _callback_id
+    ) {
+      const query = queryContexts[_query_id];
+      if (query) {
+        delete queryContexts[_query_id];
+        clearTimeout(query.timeoutId);
+        query.callback(payload);
+      }
+      event.sender.send(_callback_id, {
+        success: true,
+      });
+    }
+  });
+
+  ipc.on('scriptQuery', ({
+    callback,
+    payload: {
+      windowId,
+      scriptContent,
+    },
+  }) => {
+    const win = findWindow(callback, windowId);
+    if (win) {
+      // timeout
+      const queryId = Math.random().toString().substr(2);
+      const timeoutId = setTimeout(() => {
+        delete queryContexts[queryId];
+        callback(new Error('timeout'));
+      }, 10 * 1024);
+      // context cache
+      queryContexts[queryId] = {
+        callback,
+        timeoutId,
+      };
+      // execute script
+      const scripts = [
+        _ec_sendBack,
+        scriptContent,
+        _ec_query_tpl(queryId),
+      ];
+      win.webContents.executeJavaScript(scripts.join(os.EOL));
     }
   });
 

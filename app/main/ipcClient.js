@@ -18,14 +18,15 @@ function init({
   }, 5 * 1024);
 
   electron.ipcMain.on('perf', (event, {
-    callbackId,
+    _query_id,
+    _callback_id,
     ...payload
   }) => {
-    if (callbackId) {
+    if (_callback_id && !_query_id) {
       ipc.send({
         ...payload,
       }).then((res) => {
-        event.sender.send(callbackId, res || {
+        event.sender.send(_callback_id, res || {
           success: true,
         });
       }).catch((err) => {
@@ -33,7 +34,7 @@ function init({
         if (err instanceof Error) {
           error = err.toString();
         }
-        event.sender.send(callbackId, {
+        event.sender.send(_callback_id, {
           success: false,
           error,
         });

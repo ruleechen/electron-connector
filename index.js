@@ -1,9 +1,11 @@
 const AsarInjector = require('./src/AsarInjector');
 const Connector = require('./src/Connector');
-const IPC = require('./src/IPC');
+const IpcEmitter = require('./src/ipc');
+const IpcSdk = require('./src/sdk');
 
 module.exports = {
   AsarInjector,
   Connector,
-  IPC,
+  IpcEmitter,
+  IpcSdk,
 };
