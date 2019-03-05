@@ -8,28 +8,31 @@ function init({
     networkPort,
   });
 
-  // heartbeat
   setInterval(() => {
-    ipc.sendCommand({
-      commandLine: {
-        action: 'heartbeat',
-        ecnow: Date.now(),
-      }
+    ipc.send({
+      action: 'heartbeat',
+      timestamp: Date.now(),
     }).catch((error) => {
       console.error(error);
     });
-  }, 1024);
+  }, 5 * 1024);
 
   electron.ipcMain.on('perf', (event, {
     callbackId,
     ...payload
   }) => {
     if (callbackId) {
-      ipc.sendCommand({
-        commandLine: payload,
+      ipc.send({
+        ...payload,
       }).then((res) => {
-        event.sender.send(callbackId, res);
-      }).catch((error) => {
+        event.sender.send(callbackId, res || {
+          success: true,
+        });
+      }).catch((err) => {
+        let error = err;
+        if (err instanceof Error) {
+          error = err.toString();
+        }
         event.sender.send(callbackId, {
           success: false,
           error,

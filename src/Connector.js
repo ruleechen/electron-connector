@@ -37,7 +37,7 @@ class Connector {
   }
 
   install() {
-    const cmd = `cd '${this.src}' && yarn install`;
+    const cmd = `cd ${this.src} && yarn install`;
     cp.execSync(cmd, { stdio: 'inherit' });
   }
 

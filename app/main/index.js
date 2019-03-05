@@ -1,25 +1,22 @@
 const electron = require('electron');
-const log = require('./logger');
 const brand = require('../brand');
-const ipcInbound = require('./ipcInbound');
-const ipcOutbound = require('./ipcOutbound');
+const ipcServer = require('./ipcServer');
+const ipcClient = require('./ipcClient');
 
 electron.app.on('ready', () => {
-  log.info('[injection] start');
-
   try {
-    ipcInbound.init({
+    ipcServer.init({
       networkPort: brand.networkPort,
     });
   } catch (ex) {
-    log.error(`[ipcInbound] init failed: ${ex}`);
+    console.error(`[ipcServer] init failed: ${ex}`);
   }
 
   try {
-    ipcOutbound.init({
+    ipcClient.init({
       networkPort: brand.networkPort + 1,
     });
   } catch (ex) {
-    log.error(`[ipcOutbound] init failed: ${ex}`);
+    console.error(`[ipcClient] init failed: ${ex}`);
   }
 });

@@ -1,5 +1,4 @@
 const os = require('os');
-const uuid = require('uuid');
 const electron = require("electron");
 const IpcEmitter = require('./ipc');
 
@@ -8,7 +7,7 @@ function _ec_sendBack({
   channel = 'perf',
   payload = {},
   resolve: resolveFn = res => res,
-  timeout = 15 * 1000,
+  timeout = 5 * 1000,
 }) {
   const ipcRenderer = window.electronSafeIpc;
   return new Promise((resolve, reject) => {
@@ -41,8 +40,8 @@ function _ec_sendBack({
       }, timeout);
     }
     ipcRenderer.send(channel, {
-      callbackId,
       ...payload,
+      callbackId,
     });
   });
 };
@@ -55,26 +54,20 @@ function init({
     networkPort,
   });
 
-  ipc.startListener();
-
-  ipc.on('getWindows', (callback) => {
+  ipc.on('getWindows', ({
+    callback,
+  }) => {
     const windowIds = [];
     electron.BrowserWindow.getAllWindows().forEach((win) => {
-      if (!win || win.isDestroyed()) {
-        return;
+      if (win && !win.isDestroyed()) {
+        windowIds.push(win.id);
       }
-      if (!win._ec_uuid) {
-        win._ec_uuid = uuid.v4();
-      }
-      windowIds.push(win._ec_uuid);
     });
     callback(windowIds);
   });
 
   function findWindow(callback, windowId) {
-    const win = electron.BrowserWindow.getAllWindows().find(x => (
-      x._ec_uuid === windowId
-    ));
+    const win = electron.BrowserWindow.fromId(windowId);
     if (!win) {
       callback(new Error(`Can not find window '${windowId}'`));
       return;
@@ -86,7 +79,13 @@ function init({
     return win;
   }
 
-  ipc.on('inspect', (callback, { windowId, mode }) => {
+  ipc.on('inspect', ({
+    callback,
+    payload: {
+      windowId,
+      mode,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.openDevTools({
@@ -98,7 +97,13 @@ function init({
     }
   });
 
-  ipc.on('executeJavaScript', (callback, { windowId, scriptContent }) => {
+  ipc.on('executeJavaScript', ({
+    callback,
+    payload: {
+      windowId,
+      scriptContent,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       const scripts = [
@@ -113,7 +118,13 @@ function init({
     }
   });
 
-  ipc.on('insertCSS', (callback, { windowId, cssContent }) => {
+  ipc.on('insertCSS', ({
+    callback,
+    payload: {
+      windowId,
+      cssContent,
+    },
+  }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.insertCSS(cssContent).then(() => {
@@ -123,6 +134,8 @@ function init({
       });
     }
   });
+
+  ipc.start();
 }
 
 module.exports = {
