@@ -63,7 +63,9 @@ function init({
         windowIds.push(win.id);
       }
     });
-    callback(windowIds);
+    callback({
+      windowIds,
+    });
   });
 
   function findWindow(callback, windowId) {
@@ -83,16 +85,17 @@ function init({
     callback,
     payload: {
       windowId,
-      mode,
+      mode = 'detach',
     },
   }) => {
     const win = findWindow(callback, windowId);
     if (win) {
       win.webContents.openDevTools({
-        mode: mode || 'detach',
+        mode,
       });
       callback({
         windowId,
+        devTools: mode,
       });
     }
   });
@@ -113,6 +116,7 @@ function init({
       win.webContents.executeJavaScript(scripts.join(os.EOL)).then(() => {
         callback({
           windowId,
+          executed: true,
         });
       });
     }
@@ -130,6 +134,7 @@ function init({
       win.webContents.insertCSS(cssContent).then(() => {
         callback({
           windowId,
+          inserted: true,
         });
       });
     }
