@@ -34,14 +34,14 @@ function _ec_sendBack({
     if (timeout > 0) {
       timeoutId = setTimeout(() => {
         ipcRenderer.emit(callbackId, null, {
-          error: '[' + payload.action + '] timeout ' + timeout + 'ms',
+          error: 'timeout ' + timeout + 'ms',
           success: false,
         });
       }, timeout);
     }
     ipcRenderer.send(channel, {
       ...payload,
-      callbackId,
+      _callback_id: callbackId,
     });
   });
 };
@@ -55,8 +55,8 @@ function _ec_query_tpl(queryId) {
         _ec_sendBack({
           payload: {
             ...data,
-            action: '_ec_query',
-            queryId: '${queryId}',
+            _action: '_ec_query',
+            _query_id: '${queryId}',
           },
         })
       )).then((res) => {
@@ -164,22 +164,22 @@ function init({
   const queryContexts = {};
 
   electron.ipcMain.on('perf', (event, {
-    action,
-    queryId,
-    callbackId,
+    _action,
+    _query_id,
+    _callback_id,
     ...payload
   }) => {
     if (
-      action === '_ec_query'
-      && queryId && callbackId
+      _action === '_ec_query'
+      && _query_id && _callback_id
     ) {
-      const query = queryContexts[queryId];
+      const query = queryContexts[_query_id];
       if (query) {
-        delete queryContexts[queryId];
+        delete queryContexts[_query_id];
         clearTimeout(query.timeoutId);
         query.callback(payload);
       }
-      event.sender.send(callbackId, {
+      event.sender.send(_callback_id, {
         success: true,
       });
     }
