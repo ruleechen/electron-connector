@@ -1,72 +1,7 @@
 const os = require('os');
 const electron = require("electron");
 const IpcEmitter = require('./ipc');
-
-const _ec_sendBack = `
-function _ec_sendBack({
-  channel = 'perf',
-  payload = {},
-  resolve: resolveFn = res => res,
-  timeout = 10 * 1000,
-}) {
-  const ipcRenderer = window.electronSafeIpc;
-  return new Promise((resolve, reject) => {
-    let timeoutId;
-    const callbackId = Math.random().toString().substr(2);
-    ipcRenderer.once(callbackId, (event, {
-      error,
-      success,
-      ...options
-    }) => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (error || success === false) {
-        reject(error);
-        return;
-      }
-      resolve(
-        resolveFn({
-          ...options,
-        })
-      );
-    });
-    if (timeout > 0) {
-      timeoutId = setTimeout(() => {
-        ipcRenderer.emit(callbackId, null, {
-          error: 'timeout ' + timeout + 'ms',
-          success: false,
-        });
-      }, timeout);
-    }
-    ipcRenderer.send(channel, {
-      ...payload,
-      _callback_id: callbackId,
-    });
-  });
-};
-`;
-
-function _ec_query_tpl(queryId) {
-  return `
-    (function() {
-      const query = _ec_query();
-      Promise.resolve(query).then((data) => (
-        _ec_sendBack({
-          payload: {
-            ...data,
-            _action: '_ec_query',
-            _query_id: '${queryId}',
-          },
-        })
-      )).then((res) => {
-        console.log(res);
-      }).catch((err) => {
-        console.error(err);
-      });
-    })();
-  `;
-}
+const scriptTpls = require('./scriptTpls');
 
 function init({
   networkPort,
@@ -90,6 +25,8 @@ function init({
     });
     callback(wins);
   });
+
+  /* eval ****************************************************/
 
   function findWindow(callback, windowId) {
     const win = electron.BrowserWindow.fromId(windowId);
@@ -119,7 +56,8 @@ function init({
         callback(new Error(`Notfound function '${func}'`));
         return;
       }
-      const result = fn.apply(win, args);
+      const res = fn.apply(win, args);
+      const result = Promise.resolve(res);
       callback({
         windowId,
         func,
@@ -143,7 +81,8 @@ function init({
         callback(new Error(`Notfound function '${func}'`));
         return;
       }
-      const result = fn.apply(win.webContents, args);
+      const res = fn.apply(win.webContents, args);
+      const result = Promise.resolve(res);
       callback({
         windowId,
         func,
@@ -152,71 +91,33 @@ function init({
     }
   });
 
-  ipc.on('executeJavaScript', ({
-    callback,
-    payload: {
-      windowId,
-      scriptContent,
-    },
-  }) => {
-    const win = findWindow(callback, windowId);
-    if (win) {
-      const scripts = [
-        _ec_sendBack,
-        scriptContent,
-      ];
-      win.webContents.executeJavaScript(scripts.join(os.EOL)).then(() => {
-        callback({
-          windowId,
-          executed: true,
-        });
-      });
-    }
-  });
-
-  ipc.on('insertCSS', ({
-    callback,
-    payload: {
-      windowId,
-      cssContent,
-    },
-  }) => {
-    const win = findWindow(callback, windowId);
-    if (win) {
-      win.webContents.insertCSS(cssContent).then(() => {
-        callback({
-          windowId,
-          inserted: true,
-        });
-      });
-    }
-  });
+  /* query ****************************************************/
 
   const queryContexts = {};
 
   electron.ipcMain.on('perf', (event, {
-    _action,
-    _query_id,
-    _callback_id,
+    _ec_action,
+    _ec_query_id,
+    _ec_callback_id,
     ...payload
   }) => {
     if (
-      _action === '_ec_query'
-      && _query_id && _callback_id
+      _ec_action === '_ec_query'
+      && _ec_query_id && _ec_callback_id
     ) {
-      const query = queryContexts[_query_id];
+      const query = queryContexts[_ec_query_id];
       if (query) {
-        delete queryContexts[_query_id];
+        delete queryContexts[_ec_query_id];
         clearTimeout(query.timeoutId);
         query.callback(payload);
       }
-      event.sender.send(_callback_id, {
+      event.sender.send(_ec_callback_id, {
         success: true,
       });
     }
   });
 
-  ipc.on('scriptQuery', ({
+  ipc.on('runQuery', ({
     callback,
     payload: {
       windowId,
@@ -238,9 +139,9 @@ function init({
       };
       // execute script
       const scripts = [
-        _ec_sendBack,
+        scriptTpls.tpl_sendback(),
         scriptContent,
-        _ec_query_tpl(queryId),
+        scriptTpls.tpl_query(queryId),
       ];
       win.webContents.executeJavaScript(scripts.join(os.EOL));
     }

@@ -14,66 +14,78 @@ class RemoteWindow extends EventEmitter {
     return this._sdk;
   }
 
-  show() {
+  evalWindow({
+    func,
+    args = [],
+  }) {
     return this._ipcClient.send({
       action: 'evalWindow',
       windowId: this._windowId,
+      func,
+      args,
+    });
+  }
+
+  evalWebContent({
+    func,
+    args = [],
+  }) {
+    return this._ipcClient.send({
+      action: 'evalWebContent',
+      windowId: this._windowId,
+      func,
+      args,
+    });
+  }
+
+  show() {
+    return this.evalWindow({
       func: 'show',
     });
   }
 
   hide() {
-    return this._ipcClient.send({
-      action: 'evalWindow',
-      windowId: this._windowId,
+    return this.evalWindow({
       func: 'hide',
     });
   }
 
   focus() {
-    return this._ipcClient.send({
-      action: 'evalWindow',
-      windowId: this._windowId,
+    return this.evalWindow({
       func: 'focus',
     });
   }
 
   close() {
-    return this._ipcClient.send({
-      action: 'evalWindow',
-      windowId: this._windowId,
+    return this.evalWindow({
       func: 'close',
     });
   }
 
   inspect(mode = 'detach') {
-    return this._ipcClient.send({
-      action: 'evalWebContent',
-      windowId: this._windowId,
+    return this.evalWebContent({
       func: 'openDevTools',
       args: [{ mode }],
     });
   }
 
-  executeScript(scriptContent) {
-    return this._ipcClient.send({
-      action: 'executeJavaScript',
-      windowId: this._windowId,
-      scriptContent,
-    });
-  }
-
   insertCSS(cssContent) {
-    return this._ipcClient.send({
-      action: 'insertCSS',
-      windowId: this._windowId,
-      cssContent,
+    return this.evalWebContent({
+      func: 'insertCSS',
+      args: [cssContent],
     });
   }
 
-  query(scriptContent) {
+  executeScript(scriptContent) {
+    return this.evalWebContent({
+      func: 'executeJavaScript',
+      args: [scriptContent],
+    });
+  }
+
+  runQuery(scriptContent) {
     return this._ipcClient.send({
-      action: 'scriptQuery',
+      action: 'runQuery',
       windowId: this._windowId,
       scriptContent,
     });
