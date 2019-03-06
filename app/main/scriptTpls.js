@@ -1,3 +1,5 @@
+const trimPlus = require('../lib/trimPlus');
+
 function tpl_sendback() {
   return `
     function _ec_sendBack({
@@ -45,16 +47,17 @@ function tpl_sendback() {
   `;
 }
 
-function tpl_query(queryId) {
+function tpl_query(queryId, queryScript) {
+  const query = trimPlus(queryScript.trim(), ';');
   return `
     (function() {
-      const query = _ec_query();
+      const query = (${query});
       Promise.resolve(query).then((data) => (
         _ec_sendBack({
           payload: {
-            ...data,
             _ec_action: '_ec_query',
             _ec_query_id: '${queryId}',
+            _ec_result: data,
           },
         })
       )).then((res) => {

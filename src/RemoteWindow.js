@@ -62,6 +62,12 @@ class RemoteWindow extends EventEmitter {
     });
   }
 
+  getBounds() {
+    return this.evalWindow({
+      func: 'getBounds',
+    })
+  }
+
   inspect(mode = 'detach') {
     return this.evalWebContent({
       func: 'openDevTools',
@@ -83,11 +89,11 @@ class RemoteWindow extends EventEmitter {
     });
   }
 
-  runQuery(scriptContent) {
+  runQuery(queryScript) {
     return this._ipcClient.send({
       action: 'runQuery',
       windowId: this._windowId,
-      scriptContent,
+      queryScript,
     });
   }
 }

@@ -56,12 +56,13 @@ function init({
         callback(new Error(`Notfound function '${func}'`));
         return;
       }
-      const res = fn.apply(win, args);
-      const result = Promise.resolve(res);
-      callback({
-        windowId,
-        func,
-        result,
+      const ret = fn.apply(win, args);
+      Promise.resolve(ret).then((result) => {
+        callback({
+          windowId,
+          func,
+          result,
+        });
       });
     }
   });
@@ -81,12 +82,13 @@ function init({
         callback(new Error(`Notfound function '${func}'`));
         return;
       }
-      const res = fn.apply(win.webContents, args);
-      const result = Promise.resolve(res);
-      callback({
-        windowId,
-        func,
-        result,
+      const ret = fn.apply(win.webContents, args);
+      Promise.resolve(ret).then((result) => {
+        callback({
+          windowId,
+          func,
+          result,
+        });
       });
     }
   });
@@ -99,7 +101,7 @@ function init({
     _ec_action,
     _ec_query_id,
     _ec_callback_id,
-    ...payload
+    _ec_result,
   }) => {
     if (
       _ec_action === '_ec_query'
@@ -109,7 +111,7 @@ function init({
       if (query) {
         delete queryContexts[_ec_query_id];
         clearTimeout(query.timeoutId);
-        query.callback(payload);
+        query.callback(_ec_result);
       }
       event.sender.send(_ec_callback_id, {
         success: true,
@@ -121,7 +123,7 @@ function init({
     callback,
     payload: {
       windowId,
-      scriptContent,
+      queryScript,
     },
   }) => {
     const win = findWindow(callback, windowId);
@@ -140,8 +142,7 @@ function init({
       // execute script
       const scripts = [
         scriptTpls.tpl_sendback(),
-        scriptContent,
-        scriptTpls.tpl_query(queryId),
+        scriptTpls.tpl_query(queryId, queryScript),
       ];
       win.webContents.executeJavaScript(scripts.join(os.EOL));
     }
