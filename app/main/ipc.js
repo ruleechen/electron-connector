@@ -6,10 +6,12 @@ class IpcEmitter extends EventEmitter {
     networkPort,
     silent = false,
     sendTimeout = 5 * 1000,
+    logger = console,
   }) {
     super();
     this._sendTimeout = sendTimeout;
     this._eventName = 'commandline';
+    this._logger = logger;
     // config ipc
     this._ipc = new IPC();
     this._ipcId = `ec-${networkPort}`;
@@ -147,9 +149,9 @@ class IpcEmitter extends EventEmitter {
     this._initServer();
     if (this._ipc.server) {
       this._ipc.server.start();
-      console.info('[ipc server] started');
+      this._logger.info('[ipc server] started');
       this._ipc.server.on('error', (error) => {
-        console.error(`[ipc server] ${error}`);
+        this._logger.error(`[ipc server] ${error}`);
       });
     }
   }
@@ -157,7 +159,7 @@ class IpcEmitter extends EventEmitter {
   destroy() {
     if (this._ipc.server) {
       this._ipc.server.stop();
-      console.info('[ipc server] stopped');
+      this._logger.info('[ipc server] stopped');
     }
   }
 
