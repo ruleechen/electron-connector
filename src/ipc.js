@@ -1,6 +1,6 @@
 const EventEmitter = require('events');
 const uuid = require('uuid');
-const ipc = require('node-ipc');
+const { IPC } = require('node-ipc');
 
 class IpcEmitter extends EventEmitter {
   constructor({
@@ -12,8 +12,9 @@ class IpcEmitter extends EventEmitter {
     this._sendTimeout = sendTimeout;
     this._eventName = 'commandline';
     // config ipc
+    this._ipc = new IPC();
     this._ipcId = `ec-${networkPort}`;
-    Object.assign(ipc.config, {
+    Object.assign(this._ipc.config, {
       id: this._ipcId,
       networkPort,
       silent,
@@ -33,8 +34,8 @@ class IpcEmitter extends EventEmitter {
         return;
       }
       let timeoutId;
-      ipc.connectTo(this._ipcId, () => {
-        const server = ipc.of[this._ipcId];
+      this._ipc.connectTo(this._ipcId, () => {
+        const server = this._ipc.of[this._ipcId];
         server.on('connect', () => {
           const callbackId = `${action}_${uuid.v4()}`;
           this._callbackIds[callbackId] = true;
@@ -77,14 +78,14 @@ class IpcEmitter extends EventEmitter {
     delete this._callbackIds[callbackId];
     if (!Object.keys(this._callbackIds).length) {
       this._idleTimtoutId = setTimeout(() => {
-        ipc.disconnect(this._ipcId);
+        this._ipc.disconnect(this._ipcId);
       }, 1024);
     }
   }
 
   _initServer() {
-    ipc.serve(() => {
-      ipc.server.on(this._eventName, ({
+    this._ipc.serve(() => {
+      this._ipc.server.on(this._eventName, ({
         action,
         _callback_id,
         ...payload
@@ -99,7 +100,7 @@ class IpcEmitter extends EventEmitter {
                 success: false,
               };
             }
-            ipc.server.emit(socket, _callback_id, res);
+            this._ipc.server.emit(socket, _callback_id, res);
           } catch (ex) {
             // ignore
           }
@@ -122,18 +123,18 @@ class IpcEmitter extends EventEmitter {
 
   start() {
     this._initServer();
-    if (ipc.server) {
-      ipc.server.start();
-      console.info('[ipc] server started');
-      ipc.server.on('error', (error) => {
+    if (this._ipc.server) {
+      this._ipc.server.start();
+      console.info('[ipc server] started');
+      this._ipc.server.on('error', (error) => {
         console.error(`[ipc server] ${error}`);
       });
     }
   }
 
   destroy() {
-    if (ipc.server) {
-      ipc.server.stop();
+    if (this._ipc.server) {
+      this._ipc.server.stop();
       console.info('[ipc server] stopped');
     }
   }

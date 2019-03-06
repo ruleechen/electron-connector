@@ -1,4 +1,5 @@
 const IpcEmitter = require('./ipc');
+const RemoteWindow = require('./RemoteWindow');
 
 class IpcSdk {
   constructor({
@@ -6,6 +7,12 @@ class IpcSdk {
     remotePort,
     silent = true,
   }) {
+    if (IpcSdk.validateInteger(localPort)) {
+      throw new Error(`localPort is required a integer`);
+    }
+    if (IpcSdk.validateInteger(remotePort)) {
+      throw new Error(`remotePort is required a integer`);
+    }
     // for sending request to host
     this._ipcClient = new IpcEmitter({
       networkPort: remotePort,
@@ -16,6 +23,13 @@ class IpcSdk {
       networkPort: localPort,
       silent,
     });
+  }
+
+  static validateInteger(num) {
+    return (
+      /^\d+$/.test(num) &&
+      typeof (num) !== 'number'
+    );
   }
 
   get ipcClient() {
@@ -30,41 +44,15 @@ class IpcSdk {
     this._ipcServer.on(action, handler);
   }
 
-  getWindowIds() {
+  getWindows() {
     return this._ipcClient.send({
       action: 'getWindows',
-    });
-  }
-
-  inspectWindow(windowId) {
-    return this._ipcClient.send({
-      action: 'inspect',
-      windowId,
-    });
-  }
-
-  executeJavaScript({ windowId, scriptContent }) {
-    return this._ipcClient.send({
-      action: 'executeJavaScript',
-      windowId,
-      scriptContent,
-    });
-  }
-
-  insertCSS({ windowId, cssContent }) {
-    return this._ipcClient.send({
-      action: 'insertCSS',
-      windowId,
-      cssContent,
-    });
-  }
-
-  scriptQuery({ windowId, scriptContent }) {
-    return this._ipcClient.send({
-      action: 'scriptQuery',
-      windowId,
-      scriptContent,
-    });
+    }).then((wins) => (
+      wins.map((win) => new RemoteWindow({
+        ipcClient: this.ipcClient,
+        windowId: win.id,
+      }))
+    ));
   }
 
   static get queryFuncName() {
