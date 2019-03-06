@@ -1,5 +1,4 @@
 const EventEmitter = require('events');
-const uuid = require('uuid');
 const { IPC } = require('node-ipc');
 
 class IpcEmitter extends EventEmitter {
@@ -35,14 +34,15 @@ class IpcEmitter extends EventEmitter {
       }
       let timeoutId;
       this._acquireConnection().then((connection) => {
-        const callbackId = `${action}_${uuid.v4()}`;
+        const randomId = Math.random().toString().substr(2);
+        const callbackId = `${action}_${randomId}`;
         this._callbackIds[callbackId] = true;
         connection.emit(this._eventName, {
           ...payload,
           action,
           _ec_callback_id: callbackId,
         });
-        connection.on(callbackId, (result) => {
+        connection.once(callbackId, (result) => {
           this._onSent(callbackId);
           if (timeoutId !== true) {
             clearTimeout(timeoutId);
