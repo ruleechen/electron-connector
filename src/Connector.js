@@ -4,25 +4,8 @@ const fse = require('fs-extra');
 const cp = require('child_process');
 
 class Connector {
-  constructor({
-    brand = Connector.defaultBrand,
-  }) {
+  constructor(brand) {
     this.brading(brand);
-  }
-
-  static get defaultBrand() {
-    return {
-      brandCode: 'ec',
-      brandAppId: 'com.electronconnector.default',
-      localNetworkPort: 13110,
-      remoteNetworkPort: 13111,
-      buildEnv: 'dev',
-      buildEnvs: [
-        'dev',
-        'test',
-        'prod',
-      ],
-    };
   }
 
   get src() {
@@ -37,20 +20,20 @@ class Connector {
     return this._brandInfo;
   }
 
-  install() {
-    const cmd = `cd ${this.src} && yarn install`;
-    cp.execSync(cmd, { stdio: 'inherit' });
-  }
-
-  brading(brand) {
+  brading({
+    applicationId = 'com.electronconnector.default',
+    localNetworkPort = 13110,
+    remoteNetworkPort = 13111,
+  } = {}) {
     // merge
-    const brandInfo = Object.assign(this._brandInfo || {}, brand);
+    const brandInfo = Object.assign(this._brandInfo || {}, {
+      applicationId,
+      localNetworkPort,
+      remoteNetworkPort,
+    });
     // verify
-    if (!brandInfo.brandCode) {
-      throw new Error('brandCode is required');
-    }
-    if (!brandInfo.brandAppId) {
-      throw new Error('brandAppId is required');
+    if (!brandInfo.applicationId) {
+      throw new Error('applicationId is required');
     }
     if (!brandInfo.localNetworkPort) {
       throw new Error('localNetworkPort is required');
@@ -58,13 +41,15 @@ class Connector {
     if (!brandInfo.remoteNetworkPort) {
       throw new Error('remoteNetworkPort is required');
     }
-    if (!Array.isArray(brandInfo.buildEnvs)) {
-      throw new Error('buildEnvs is incorrect');
-    }
-    if (!brandInfo.buildEnv) {
-      throw new Error('buildEnv is required');
-    }
+    // set
     this._brandInfo = brandInfo;
+  }
+
+  install() {
+    // install
+    const cmd = `cd ${this.src} && yarn install`;
+    cp.execSync(cmd, { stdio: 'inherit' });
+    console.log('[Connector] yarn installed');
     // clear
     fse.ensureDirSync(this.src);
     del.sync([this.brandDest]);
@@ -73,6 +58,7 @@ class Connector {
       this.brandDest,
       JSON.stringify(this._brandInfo, null, 2)
     );
+    console.log('[Connector] brand saved');
   }
 }
 
