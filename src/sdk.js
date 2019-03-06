@@ -54,19 +54,6 @@ class IpcSdk {
       }))
     ));
   }
-
-  static get queryFuncName() {
-    // sample:
-    // Promise is supported
-    /*
-    function _ec_query() {
-      return {
-        isMainWindow: (location.pathname === '/_'),
-      };
-    }
-    */
-    return '_ec_query';
-  }
 }
 
 module.exports = IpcSdk;

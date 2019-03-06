@@ -44,14 +44,14 @@ class IpcEmitter extends EventEmitter {
             action,
             _ec_callback_id: callbackId,
           });
-          server.on(callbackId, (data) => {
+          server.on(callbackId, (result) => {
             this._onSent(callbackId);
             if (timeoutId !== true) {
               clearTimeout(timeoutId);
-              if (data && (data.error || data.success === false)) {
-                reject(data);
+              if (result && (result.error || result.success === false)) {
+                reject(result);
               } else {
-                resolve(data);
+                resolve(result);
               }
             }
           });
@@ -90,9 +90,9 @@ class IpcEmitter extends EventEmitter {
         _ec_callback_id,
         ...payload
       }, socket) => {
-        const callback = (data) => {
+        const callback = (result) => {
           try {
-            let res = data;
+            let res = result;
             if (res instanceof Error) {
               res = {
                 action,
