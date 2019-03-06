@@ -42,7 +42,7 @@ class IpcEmitter extends EventEmitter {
           server.emit(this._eventName, {
             ...payload,
             action,
-            _callback_id: callbackId,
+            _ec_callback_id: callbackId,
           });
           server.on(callbackId, (data) => {
             this._onSent(callbackId);
@@ -87,7 +87,7 @@ class IpcEmitter extends EventEmitter {
     this._ipc.serve(() => {
       this._ipc.server.on(this._eventName, ({
         action,
-        _callback_id,
+        _ec_callback_id,
         ...payload
       }, socket) => {
         const callback = (data) => {
@@ -100,7 +100,7 @@ class IpcEmitter extends EventEmitter {
                 success: false,
               };
             }
-            this._ipc.server.emit(socket, _callback_id, res);
+            this._ipc.server.emit(socket, _ec_callback_id, res);
           } catch (ex) {
             // ignore
           }

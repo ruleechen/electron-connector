@@ -38,7 +38,7 @@ function tpl_sendback() {
         }
         ipcRenderer.send(channel, {
           ...payload,
-          _callback_id: callbackId,
+          _ec_callback_id: callbackId,
         });
       });
     };
@@ -53,8 +53,8 @@ function tpl_query(queryId) {
         _ec_sendBack({
           payload: {
             ...data,
-            _action: '_ec_query',
-            _query_id: '${queryId}',
+            _ec_action: '_ec_query',
+            _ec_query_id: '${queryId}',
           },
         })
       )).then((res) => {

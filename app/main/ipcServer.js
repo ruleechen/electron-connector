@@ -96,22 +96,22 @@ function init({
   const queryContexts = {};
 
   electron.ipcMain.on('perf', (event, {
-    _action,
-    _query_id,
-    _callback_id,
+    _ec_action,
+    _ec_query_id,
+    _ec_callback_id,
     ...payload
   }) => {
     if (
-      _action === '_ec_query'
-      && _query_id && _callback_id
+      _ec_action === '_ec_query'
+      && _ec_query_id && _ec_callback_id
     ) {
-      const query = queryContexts[_query_id];
+      const query = queryContexts[_ec_query_id];
       if (query) {
-        delete queryContexts[_query_id];
+        delete queryContexts[_ec_query_id];
         clearTimeout(query.timeoutId);
         query.callback(payload);
       }
-      event.sender.send(_callback_id, {
+      event.sender.send(_ec_callback_id, {
         success: true,
       });
     }
