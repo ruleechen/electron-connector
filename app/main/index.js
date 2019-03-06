@@ -6,7 +6,7 @@ const ipcClient = require('./ipcClient');
 electron.app.on('ready', () => {
   try {
     ipcServer.init({
-      networkPort: brand.networkPort,
+      networkPort: brand.localNetworkPort,
     });
   } catch (ex) {
     console.error(`[ipcServer] init failed: ${ex}`);
@@ -14,7 +14,7 @@ electron.app.on('ready', () => {
 
   try {
     ipcClient.init({
-      networkPort: brand.networkPort + 1,
+      networkPort: brand.remoteNetworkPort,
     });
   } catch (ex) {
     console.error(`[ipcClient] init failed: ${ex}`);
