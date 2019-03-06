@@ -11,7 +11,7 @@ class RemoteWindow extends EventEmitter {
   }
 
   get id() {
-    return this._sdk;
+    return this._windowId;
   }
 
   evalWindow({
@@ -20,7 +20,7 @@ class RemoteWindow extends EventEmitter {
   }) {
     return this._ipcClient.send({
       action: 'evalWindow',
-      windowId: this._windowId,
+      windowId: this.id,
       func,
       args,
     });
@@ -32,7 +32,7 @@ class RemoteWindow extends EventEmitter {
   }) {
     return this._ipcClient.send({
       action: 'evalWebContent',
-      windowId: this._windowId,
+      windowId: this.id,
       func,
       args,
     });
@@ -92,7 +92,7 @@ class RemoteWindow extends EventEmitter {
   runQuery(queryScript) {
     return this._ipcClient.send({
       action: 'runQuery',
-      windowId: this._windowId,
+      windowId: this.id,
       queryScript,
     });
   }

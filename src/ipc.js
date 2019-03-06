@@ -34,34 +34,31 @@ class IpcEmitter extends EventEmitter {
         return;
       }
       let timeoutId;
-      this._ipc.connectTo(this._ipcId, () => {
-        const server = this._ipc.of[this._ipcId];
-        server.on('connect', () => {
-          const callbackId = `${action}_${uuid.v4()}`;
-          this._callbackIds[callbackId] = true;
-          server.emit(this._eventName, {
-            ...payload,
-            action,
-            _ec_callback_id: callbackId,
-          });
-          server.on(callbackId, (result) => {
-            this._onSent(callbackId);
-            if (timeoutId !== true) {
-              clearTimeout(timeoutId);
-              if (result && (result.error || result.success === false)) {
-                reject(result);
-              } else {
-                resolve(result);
-              }
+      this._acquireConnection().then((connection) => {
+        const callbackId = `${action}_${uuid.v4()}`;
+        this._callbackIds[callbackId] = true;
+        connection.emit(this._eventName, {
+          ...payload,
+          action,
+          _ec_callback_id: callbackId,
+        });
+        connection.on(callbackId, (result) => {
+          this._onSent(callbackId);
+          if (timeoutId !== true) {
+            clearTimeout(timeoutId);
+            if (result && (result.error || result.success === false)) {
+              reject(result);
+            } else {
+              resolve(result);
             }
-          });
-          server.on('error', (error) => {
-            this._onSent(callbackId);
-            if (timeoutId !== true) {
-              clearTimeout(timeoutId);
-              reject(error);
-            }
-          });
+          }
+        });
+        connection.on('error', (error) => {
+          this._onSent(callbackId);
+          if (timeoutId !== true) {
+            clearTimeout(timeoutId);
+            reject(error);
+          }
         });
       });
       timeoutId = setTimeout(() => {
@@ -74,11 +71,36 @@ class IpcEmitter extends EventEmitter {
     });
   }
 
+  _acquireConnection() {
+    if (this._currentConnection) {
+      clearTimeout(this._idleTimtoutId);
+      return Promise.resolve(this._currentConnection);
+    }
+    if (this._connectionPromise) {
+      return Promise.resolve(this._connectionPromise);
+    }
+    this._connectionPromise = new Promise((resolve) => {
+      this._ipc.connectTo(this._ipcId, () => {
+        const connection = this._ipc.of[this._ipcId];
+        connection.on('connect', () => {
+          this._currentConnection = connection;
+          this._connectionPromise = null;
+          resolve(connection);
+        });
+        connection.on('disconnect', () => {
+          this._currentConnection = null;
+        });
+      });
+    });
+    return this._connectionPromise;
+  }
+
   _onSent(callbackId) {
     delete this._callbackIds[callbackId];
     if (!Object.keys(this._callbackIds).length) {
       this._idleTimtoutId = setTimeout(() => {
         this._ipc.disconnect(this._ipcId);
+        this._currentConnection = null;
       }, 1024);
     }
   }
