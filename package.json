@@ -7,6 +7,9 @@
     "install": "cd app && yarn install",
     "test": "node ./tests/index.js"
   },
+  "engines": {
+    "yarn": "^1.13.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ruleechen/electron-connector.git"

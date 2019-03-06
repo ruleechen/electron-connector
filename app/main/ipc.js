@@ -5,11 +5,14 @@ class IpcEmitter extends EventEmitter {
   constructor({
     networkPort,
     silent = false,
-    sendTimeout = 5 * 1000,
+    sendTimeout = 15 * 1024,
+    idleTimtout = 1 * 1024,
     logger = console,
   }) {
     super();
+    // parameters
     this._sendTimeout = sendTimeout;
+    this._idleTimtout = idleTimtout;
     this._eventName = 'commandline';
     this._logger = logger;
     // config ipc
@@ -21,32 +24,46 @@ class IpcEmitter extends EventEmitter {
       silent,
     });
     // caches
-    this._callbackIds = {};
+    this._requests = {};
+  }
+
+  get interProcessCommunicationId() {
+    return this._ipcId;
   }
 
   send({
     action,
     ...payload
   }) {
-    clearTimeout(this._idleTimtoutId);
-    return new Promise((resolve, reject) => {
-      if (!action) {
-        reject(new Error('action is required'));
-        return;
-      }
-      let timeoutId;
-      this._acquireConnection().then((connection) => {
+    if (!action) {
+      throw new Error('action is required');
+    }
+    return this._acquireConnection().then((connection) => (
+      new Promise((resolve, reject) => {
+        // request id
         const randomId = Math.random().toString().substr(2);
-        const callbackId = `${action}_${randomId}`;
-        this._callbackIds[callbackId] = true;
-        connection.emit(this._eventName, {
-          ...payload,
-          action,
-          _ec_callback_id: callbackId,
-        });
-        connection.once(callbackId, (result) => {
-          this._onSent(callbackId);
-          if (timeoutId !== true) {
+        const requestId = `${action}_${randomId}`;
+        // timeout timer
+        let timeoutId = setTimeout(() => {
+          const completed = this._completeRequest(requestId);
+          if (completed) {
+            timeoutId = true;
+            reject({
+              error: 'timeout',
+              success: false,
+            });
+          }
+        }, this._sendTimeout);
+        // set cache
+        this._requests[requestId] = {
+          resolve,
+          reject,
+          timeoutId,
+        };
+        // subscribe response
+        connection.once(requestId, (result) => {
+          const completed = this._completeRequest(requestId);
+          if (completed && timeoutId !== true) {
             clearTimeout(timeoutId);
             if (result && (result.error || result.success === false)) {
               reject(result);
@@ -55,33 +72,25 @@ class IpcEmitter extends EventEmitter {
             }
           }
         });
-        connection.on('error', (error) => {
-          this._onSent(callbackId);
-          if (timeoutId !== true) {
-            clearTimeout(timeoutId);
-            reject(error);
-          }
+        // send request
+        connection.emit(this._eventName, {
+          ...payload,
+          action,
+          _ec_callback_id: requestId,
         });
-      });
-      timeoutId = setTimeout(() => {
-        timeoutId = true;
-        reject({
-          error: 'timeout',
-          success: false,
-        });
-      }, this._sendTimeout);
-    });
+      })
+    ));
   }
 
   _acquireConnection() {
+    clearTimeout(this._idleTimtoutId);
     if (this._currentConnection) {
-      clearTimeout(this._idleTimtoutId);
       return Promise.resolve(this._currentConnection);
     }
     if (this._connectionPromise) {
       return Promise.resolve(this._connectionPromise);
     }
-    this._connectionPromise = new Promise((resolve) => {
+    this._connectionPromise = new Promise((resolve, reject) => {
       this._ipc.connectTo(this._ipcId, () => {
         const connection = this._ipc.of[this._ipcId];
         connection.on('connect', () => {
@@ -92,19 +101,36 @@ class IpcEmitter extends EventEmitter {
         connection.on('disconnect', () => {
           this._currentConnection = null;
         });
+        connection.on('error', (error) => {
+          reject(error);
+        });
       });
     });
     return this._connectionPromise;
   }
 
-  _onSent(callbackId) {
-    delete this._callbackIds[callbackId];
-    if (!Object.keys(this._callbackIds).length) {
+  _completeRequest(requestId) {
+    const deleted = delete this._requests[requestId];
+    if (!Object.keys(this._requests).length) {
       this._idleTimtoutId = setTimeout(() => {
         this._ipc.disconnect(this._ipcId);
         this._currentConnection = null;
-      }, 1024);
+      }, this._idleTimtout);
     }
+    return deleted;
+  }
+
+  _terminateRequests() {
+    this._ipc.disconnect(this._ipcId);
+    Object.keys(this._requests).forEach((requestId) => {
+      const request = this._requests[requestId];
+      delete this._requests[requestId];
+      clearTimeout(request.timeoutId);
+      request.reject({
+        error: 'terminated',
+        success: false,
+      });
+    });
   }
 
   _initServer() {
@@ -157,14 +183,11 @@ class IpcEmitter extends EventEmitter {
   }
 
   destroy() {
+    this._terminateRequests();
     if (this._ipc.server) {
       this._ipc.server.stop();
       this._logger.info('[ipc server] stopped');
     }
-  }
-
-  get interProcessCommunicationId() {
-    return this._ipcId;
   }
 }
 

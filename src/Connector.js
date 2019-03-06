@@ -14,7 +14,8 @@ class Connector {
     return {
       brandCode: 'ec',
       brandAppId: 'com.electronconnector.default',
-      networkPort: 13110,
+      localNetworkPort: 13110,
+      remoteNetworkPort: 13111,
       buildEnv: 'dev',
       buildEnvs: [
         'dev',
@@ -51,8 +52,11 @@ class Connector {
     if (!brandInfo.brandAppId) {
       throw new Error('brandAppId is required');
     }
-    if (!brandInfo.networkPort) {
-      throw new Error('networkPort is required');
+    if (!brandInfo.localNetworkPort) {
+      throw new Error('localNetworkPort is required');
+    }
+    if (!brandInfo.remoteNetworkPort) {
+      throw new Error('remoteNetworkPort is required');
     }
     if (!Array.isArray(brandInfo.buildEnvs)) {
       throw new Error('buildEnvs is incorrect');
