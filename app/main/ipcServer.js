@@ -81,7 +81,7 @@ function init({
     const wins = [];
     electron.BrowserWindow.getAllWindows().forEach((win) => {
       if (win && !win.isDestroyed()) {
-        windowIds.push({
+        wins.push({
           id: win.id,
           title: win.getTitle(),
           bounds: win.getBounds(),
@@ -104,21 +104,50 @@ function init({
     return win;
   }
 
-  ipc.on('inspect', ({
+  ipc.on('evalWindow', ({
     callback,
     payload: {
       windowId,
-      mode = 'detach',
+      func,
+      args = [],
     },
   }) => {
     const win = findWindow(callback, windowId);
     if (win) {
-      win.webContents.openDevTools({
-        mode,
-      });
+      const fn = win[func];
+      if (typeof (fn) !== 'function') {
+        callback(new Error(`Notfound function '${func}'`));
+        return;
+      }
+      const result = fn.apply(win, args);
       callback({
         windowId,
-        devTools: mode,
+        func,
+        result,
+      });
+    }
+  });
+
+  ipc.on('evalWebContent', ({
+    callback,
+    payload: {
+      windowId,
+      func,
+      args = [],
+    },
+  }) => {
+    const win = findWindow(callback, windowId);
+    if (win) {
+      const fn = win.webContents[func];
+      if (typeof (fn) !== 'function') {
+        callback(new Error(`Notfound function '${func}'`));
+        return;
+      }
+      const result = fn.apply(win.webContents, args);
+      callback({
+        windowId,
+        func,
+        result,
       });
     }
   });

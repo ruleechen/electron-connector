@@ -1,4 +1,5 @@
 const IpcEmitter = require('./ipc');
+const RemoteWindow = require('./RemoteWindow');
 
 class IpcSdk {
   constructor({
@@ -46,38 +47,12 @@ class IpcSdk {
   getWindows() {
     return this._ipcClient.send({
       action: 'getWindows',
-    });
-  }
-
-  inspectWindow(windowId) {
-    return this._ipcClient.send({
-      action: 'inspect',
-      windowId,
-    });
-  }
-
-  executeJavaScript({ windowId, scriptContent }) {
-    return this._ipcClient.send({
-      action: 'executeJavaScript',
-      windowId,
-      scriptContent,
-    });
-  }
-
-  insertCSS({ windowId, cssContent }) {
-    return this._ipcClient.send({
-      action: 'insertCSS',
-      windowId,
-      cssContent,
-    });
-  }
-
-  scriptQuery({ windowId, scriptContent }) {
-    return this._ipcClient.send({
-      action: 'scriptQuery',
-      windowId,
-      scriptContent,
-    });
+    }).then((wins) => (
+      wins.map((win) => new RemoteWindow({
+        ipcClient: this.ipcClient,
+        windowId: win.id,
+      }))
+    ));
   }
 
   static get queryFuncName() {
