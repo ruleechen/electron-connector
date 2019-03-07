@@ -3,6 +3,17 @@ const path = require('path');
 const sdk = require('./sdk');
 
 //---------------------------------------------------------------------
+const mainWindowIndex = 0;
+
+sdk.getWindows()
+  .then((wins) => (
+    wins[mainWindowIndex].executeScript('alert("hello everyone!")')
+  ))
+  .catch((err) => {
+    console.error(err);
+  });
+
+//---------------------------------------------------------------------
 
 const isMainWindowScript = `
 function() {
@@ -30,22 +41,22 @@ const phoneScript = fs.readFileSync(filePath, { encoding: 'utf8' });
 sdk.getWindows()
   .then((wins) => (
     Promise.all([
-      wins[0]
+      wins[mainWindowIndex]
         .inspect()
         .then((res) => {
           console.log(res);
         }),
 
-      wins[0]
+      wins[mainWindowIndex]
         .runQuery(isMainWindowScript)
         .then((res) => {
           console.log(res);
         }),
 
-      wins[0]
+      wins[mainWindowIndex]
         .executeScript(insertHtmlScript)
         .then(() => (
-          wins[0].executeScript(phoneScript)
+          wins[mainWindowIndex].executeScript(phoneScript)
         ))
         .then((res) => {
           console.log(res);
