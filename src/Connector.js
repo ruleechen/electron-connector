@@ -52,7 +52,7 @@ class Connector {
     console.log('[Connector] yarn installed');
     // clear
     fse.ensureDirSync(this.src);
-    del.sync([this.brandDest]);
+    del.sync([this.brandDest], { force: true });
     // build
     fse.writeFileSync(
       this.brandDest,

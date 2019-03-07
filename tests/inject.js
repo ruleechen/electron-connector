@@ -3,8 +3,8 @@ const path = require('path');
 const brand = require('./brand');
 
 // (required) the target asar
-// const archive = '/Applications/Microsoft Teams.app/Contents/Resources/app.asar';
 const archive = 'C:/Users/rulee.chen/AppData/Local/Microsoft/Teams/current/resources/app.asar';
+// const archive = '/Applications/Microsoft Teams.app/Contents/Resources/app.asar';
 // (optional) your temp folder for building
 const buildDir = path.resolve(__dirname, '../build');
 
