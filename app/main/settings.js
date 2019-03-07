@@ -7,7 +7,7 @@ let _appSettings;
 module.exports = {
   get appSettings() {
     if (!_appSettings) {
-      const settingsPath = path.resolve(dataPath(), `./${brand.brandAppId}/settings`);
+      const settingsPath = path.resolve(dataPath(), `./${brand.applicationId}/settings`);
       _appSettings = new Store({
         cwd: settingsPath,
         name: 'app',
