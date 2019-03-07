@@ -140,33 +140,36 @@ class IpcEmitter extends EventEmitter {
         _ec_callback_id,
         ...payload
       }, socket) => {
-        const callback = (result) => {
+        new Promise((resolve, reject) => {
           try {
-            let res = result;
-            if (res instanceof Error) {
-              res = {
-                action,
-                error: res.toString(),
-                success: false,
-              };
-            }
-            this._ipc.server.emit(socket, _ec_callback_id, res);
-          } catch (ex) {
-            // ignore
+            this.emit(action, {
+              resolve,
+              reject,
+              payload,
+            });
+          } catch (err) {
+            reject({
+              action,
+              error: err && err.toString(),
+              success: false,
+            });
           }
-        };
-        try {
-          this.emit(action, {
-            payload,
-            callback,
-          });
-        } catch (err) {
-          callback({
+        }).then((result) => {
+          this._ipc.server.emit(socket, _ec_callback_id, result || {
             action,
-            error: err && err.toString(),
-            success: false,
+            success: true,
           });
-        }
+        }).catch((error) => {
+          let err = error;
+          if (err instanceof Error) {
+            err = {
+              action,
+              success: false,
+              error: res.toString(),
+            };
+          }
+          this._ipc.server.emit(socket, _ec_callback_id, err);
+        });
       });
     });
   }

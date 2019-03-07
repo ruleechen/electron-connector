@@ -11,85 +11,93 @@ function init({
   });
 
   ipc.on('getWindows', ({
-    callback,
+    resolve,
   }) => {
     const wins = [];
-    electron.BrowserWindow.getAllWindows().forEach((win) => {
-      if (win && !win.isDestroyed()) {
-        wins.push({
-          id: win.id,
-          title: win.getTitle(),
-          bounds: win.getBounds(),
-        });
-      }
-    });
-    callback(wins);
+    electron.BrowserWindow
+      .getAllWindows()
+      .forEach((win) => {
+        if (win && !win.isDestroyed()) {
+          wins.push({
+            id: win.id,
+            title: win.getTitle(),
+            bounds: win.getBounds(),
+          });
+        }
+      });
+    resolve(wins);
   });
 
   /* eval ****************************************************/
 
-  function findWindow(callback, windowId) {
+  function findWindow(reject, windowId) {
     const win = electron.BrowserWindow.fromId(windowId);
     if (!win) {
-      callback(new Error(`Can not find window '${windowId}'`));
+      reject(new Error(`Can not find window '${windowId}'`));
       return;
     }
     if (win.isDestroyed()) {
-      callback(new Error(`Window '${windowId}' is destroyed`));
+      reject(new Error(`Window '${windowId}' is destroyed`));
       return;
     }
     return win;
   }
 
   ipc.on('evalWindow', ({
-    callback,
+    resolve,
+    reject,
     payload: {
       windowId,
       func,
       args = [],
     },
   }) => {
-    const win = findWindow(callback, windowId);
+    const win = findWindow(reject, windowId);
     if (win) {
       const fn = win[func];
       if (typeof (fn) !== 'function') {
-        callback(new Error(`Notfound function '${func}'`));
+        reject(new Error(`Notfound function '${func}'`));
         return;
       }
       const ret = fn.apply(win, args);
-      Promise.resolve(ret).then((result) => {
-        callback({
-          windowId,
-          func,
-          result,
+      Promise.resolve(ret)
+        .catch(reject)
+        .then((result) => {
+          resolve({
+            windowId,
+            func,
+            result,
+          });
         });
-      });
     }
   });
 
   ipc.on('evalWebContent', ({
-    callback,
+    resolve,
+    reject,
     payload: {
       windowId,
       func,
       args = [],
     },
   }) => {
-    const win = findWindow(callback, windowId);
+    const win = findWindow(reject, windowId);
     if (win) {
       const fn = win.webContents[func];
       if (typeof (fn) !== 'function') {
-        callback(new Error(`Notfound function '${func}'`));
+        reject(new Error(`Notfound function '${func}'`));
         return;
       }
       const ret = fn.apply(win.webContents, args);
-      Promise.resolve(ret).then((result) => {
-        callback({
-          windowId,
-          func,
-          result,
+      Promise.resolve(ret)
+        .catch(reject)
+        .then((result) => {
+          resolve({
+            windowId,
+            func,
+            result,
+          });
         });
-      });
     }
   });
 
@@ -111,7 +119,7 @@ function init({
       if (query) {
         delete queryContexts[_ec_query_id];
         clearTimeout(query.timeoutId);
-        query.callback(_ec_result);
+        query.resolve(_ec_result);
       }
       event.sender.send(_ec_callback_id, {
         success: true,
@@ -120,23 +128,25 @@ function init({
   });
 
   ipc.on('runQuery', ({
-    callback,
+    resolve,
+    reject,
     payload: {
       windowId,
       queryScript,
     },
   }) => {
-    const win = findWindow(callback, windowId);
+    const win = findWindow(resolve, windowId);
     if (win) {
       // timeout
       const queryId = Math.random().toString().substr(2);
       const timeoutId = setTimeout(() => {
         delete queryContexts[queryId];
-        callback(new Error('timeout'));
+        reject(new Error('timeout'));
       }, 10 * 1024);
       // context cache
       queryContexts[queryId] = {
-        callback,
+        resolve,
+        reject,
         timeoutId,
       };
       // execute script
