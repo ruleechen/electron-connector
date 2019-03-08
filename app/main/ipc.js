@@ -49,6 +49,7 @@ class IpcEmitter extends EventEmitter {
           if (completed) {
             timeoutId = true;
             reject({
+              action,
               error: 'timeout',
               success: false,
             });
@@ -165,7 +166,7 @@ class IpcEmitter extends EventEmitter {
             err = {
               action,
               success: false,
-              error: res.toString(),
+              error: err.toString(),
             };
           }
           this._ipc.server.emit(socket, _ec_callback_id, err);

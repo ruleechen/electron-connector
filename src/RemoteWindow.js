@@ -1,20 +1,29 @@
-const EventEmitter = require('events');
+const RemoteEvents = require('./RemoteEvents');
 
-class RemoteWindow extends EventEmitter {
+class RemoteWindow extends RemoteEvents {
   constructor({
     ipcClient,
     windowId,
+    webContents,
+    logger = console,
   }) {
-    super();
+    super({
+      logger,
+    });
     this._ipcClient = ipcClient;
     this._windowId = windowId;
+    this._webContents = webContents;
   }
 
   get id() {
     return this._windowId;
   }
 
-  evalWindow({
+  get webContents() {
+    return this._webContents;
+  }
+
+  _eval({
     func,
     args = [],
   }) {
@@ -26,75 +35,34 @@ class RemoteWindow extends EventEmitter {
     });
   }
 
-  evalWebContent({
-    func,
-    args = [],
-  }) {
-    return this._ipcClient.send({
-      action: 'evalWebContent',
-      windowId: this.id,
-      func,
-      args,
-    });
-  }
-
   show() {
-    return this.evalWindow({
+    return this._eval({
       func: 'show',
     });
   }
 
   hide() {
-    return this.evalWindow({
+    return this._eval({
       func: 'hide',
     });
   }
 
   focus() {
-    return this.evalWindow({
+    return this._eval({
       func: 'focus',
     });
   }
 
   close() {
-    return this.evalWindow({
+    return this._eval({
       func: 'close',
     });
   }
 
   getBounds() {
-    return this.evalWindow({
+    return this._eval({
       func: 'getBounds',
     })
-  }
-
-  inspect(mode = 'detach') {
-    return this.evalWebContent({
-      func: 'openDevTools',
-      args: [{ mode }],
-    });
-  }
-
-  insertCSS(cssContent) {
-    return this.evalWebContent({
-      func: 'insertCSS',
-      args: [cssContent],
-    });
-  }
-
-  executeScript(scriptContent) {
-    return this.evalWebContent({
-      func: 'executeJavaScript',
-      args: [scriptContent],
-    });
-  }
-
-  runQuery(queryScript) {
-    return this._ipcClient.send({
-      action: 'runQuery',
-      windowId: this.id,
-      queryScript,
-    });
   }
 }
 

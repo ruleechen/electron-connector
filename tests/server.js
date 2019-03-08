@@ -6,8 +6,7 @@ sdk.on('heartbeat', ({
   resolve,
   payload,
 }) => {
-  console.log('heartbeat --------------------');
-  console.log(payload);
+  console.log('heartbeat', payload);
   resolve();
 });
 
