@@ -1,6 +1,8 @@
-# electron-connector
+# Electron Connector
 
 A nodejs tool for injecting custom logic into 3rd-party electron application.
+
+![Overview](overview.png)
 
 ## Install
 ```bash
@@ -99,7 +101,7 @@ sdk.getWindows()
   });
 ```
 
-## Receive events
+## Receive Electron Events
 
 - Setup a remote server for receiving target electron events
 

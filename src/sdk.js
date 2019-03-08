@@ -6,6 +6,7 @@ class IpcSdk {
     localPort,
     remotePort,
     silent = true,
+    remoteWindowImpl = RemoteWindow,
   }) {
     if (IpcSdk.validateInteger(localPort)) {
       throw new Error(`localPort is required a integer`);
@@ -13,6 +14,10 @@ class IpcSdk {
     if (IpcSdk.validateInteger(remotePort)) {
       throw new Error(`remotePort is required a integer`);
     }
+    if (!(RemoteWindowImpl instanceof RemoteWindow)) {
+      throw new Error('RemoteWindowImpl extends from RemoteWindow is required');
+    }
+    this._remoteWindowImpl = remoteWindowImpl;
     // for sending request to host
     this._ipcClient = new IpcEmitter({
       networkPort: remotePort,
@@ -45,10 +50,11 @@ class IpcSdk {
   }
 
   getWindows() {
+    const RemoteWindowImpl = this._remoteWindowImpl;
     return this._ipcClient.send({
       action: 'getWindows',
     }).then((wins) => (
-      wins.map((win) => new RemoteWindow({
+      wins.map((win) => new RemoteWindowImpl({
         ipcClient: this.ipcClient,
         windowId: win.id,
       }))
