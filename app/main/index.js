@@ -1,20 +1,31 @@
 const electron = require('electron');
 const brand = require('../brand');
-const ipcServer = require('./ipcServer');
-const ipcClient = require('./ipcClient');
+const IpcEmitter = require('./ipc');
+const initIpcServer = require('./ipcServer');
+const initIpcClient = require('./ipcClient');
 
 electron.app.on('ready', () => {
+  const ipcClient = new IpcEmitter({
+    networkPort: brand.remoteNetworkPort,
+  });
+
+  const ipcServer = new IpcEmitter({
+    networkPort: brand.localNetworkPort,
+  });
+
   try {
-    ipcServer.init({
-      networkPort: brand.localNetworkPort,
+    initIpcServer({
+      ipcClient,
+      ipcServer,
     });
   } catch (ex) {
     console.error(`[ipcServer] init failed: ${ex}`);
   }
 
   try {
-    ipcClient.init({
-      networkPort: brand.remoteNetworkPort,
+    initIpcClient({
+      ipcClient,
+      ipcServer,
     });
   } catch (ex) {
     console.error(`[ipcClient] init failed: ${ex}`);

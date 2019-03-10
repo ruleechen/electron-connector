@@ -1,15 +1,11 @@
 const electron = require('electron');
-const IpcEmitter = require('./ipc');
 
 function init({
-  networkPort,
+  ipcClient,
+  ipcServer,
 }) {
-  const ipc = new IpcEmitter({
-    networkPort,
-  });
-
   setInterval(() => {
-    ipc.send({
+    ipcClient.send({
       action: 'heartbeat',
       timestamp: Date.now(),
     }).catch((error) => {
@@ -23,7 +19,7 @@ function init({
     ...payload
   }) => {
     if (_ec_callback_id && !_ec_query_id) {
-      ipc.send({
+      ipcClient.send({
         ...payload,
       }).then((res) => {
         event.sender.send(_ec_callback_id, res || {
@@ -43,6 +39,4 @@ function init({
   });
 }
 
-module.exports = {
-  init,
-};
+module.exports = init;

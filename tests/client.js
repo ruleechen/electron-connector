@@ -42,18 +42,21 @@ sdk.getWindows()
   .then((wins) => (
     Promise.all([
       wins[mainWindowIndex]
+        .webContents
         .inspect()
         .then((res) => {
           console.log(res);
         }),
 
       wins[mainWindowIndex]
+        .webContents
         .runQuery(isMainWindowScript)
         .then((res) => {
           console.log(res);
         }),
 
       wins[mainWindowIndex]
+        .webContents
         .executeScript(insertHtmlScript)
         .then(() => (
           wins[mainWindowIndex].executeScript(phoneScript)

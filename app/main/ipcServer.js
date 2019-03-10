@@ -1,16 +1,12 @@
 const os = require('os');
 const electron = require("electron");
-const IpcEmitter = require('./ipc');
 const scriptTpls = require('./scriptTpls');
 
 function init({
-  networkPort,
+  ipcClient,
+  ipcServer,
 }) {
-  const ipc = new IpcEmitter({
-    networkPort,
-  });
-
-  ipc.on('getWindows', ({
+  ipcServer.on('getWindows', ({
     resolve,
   }) => {
     const wins = [];
@@ -21,7 +17,8 @@ function init({
           wins.push({
             id: win.id,
             title: win.getTitle(),
-            bounds: win.getBounds(),
+            webContentsId: (win.webContents && win.webContents.id),
+            webContentsTitle: (win.webContents && win.webContents.getTitle()),
           });
         }
       });
@@ -30,74 +27,113 @@ function init({
 
   /* eval ****************************************************/
 
-  function findWindow(reject, windowId) {
-    const win = electron.BrowserWindow.fromId(windowId);
-    if (!win) {
+  function getRemoteEventsHandler(host, eventName, contexts) {
+    const eventHandlers = host._ec_event_handlers || {};
+    host._ec_event_handlers = eventHandlers;
+    let handler = eventHandlers[eventName];
+    if (!handler) {
+      handler = eventHandlers[eventName] = function (ev, ...args) {
+        ipcClient.send({
+          action: '_ec_remote_events',
+          eventName,
+          eventArgs: args,
+          ...contexts,
+        }).catch((error) => {
+          console.error(error);
+        });
+      };
+    }
+    return handler;
+  }
+
+  function evalHostFunc(resolve, reject, host, func, args, contexts) {
+    if (!(func in host)) {
+      reject(new Error(`Notfound '${func}'`));
+      return;
+    }
+    const isNewEvent = (
+      func === 'on' ||
+      func === 'addListener'
+    );
+    const isRemoveEvent = (
+      func === 'off' ||
+      func === 'removeListener'
+    );
+    let applyArgs = args;
+    if (isNewEvent || isRemoveEvent) {
+      const eventName = args[0];
+      const handler = getRemoteEventsHandler(host, eventName, contexts);
+      // prevent duplicated event handler
+      if (isNewEvent) {
+        const listeners = host.listeners(eventName);
+        if (listeners.indexOf(handler) !== -1) {
+          host.removeListener(eventName, handler);
+        }
+      }
+      applyArgs = [eventName, handler];
+    }
+    let ret = host[func];
+    if (typeof (ret) === 'function') {
+      ret = ret.apply(host, applyArgs);
+      // TypeError: Converting circular structure to JSON
+      if (ret === host) {
+        ret = null;
+      }
+    }
+    Promise.resolve(ret)
+      .catch(reject)
+      .then((result) => {
+        resolve({
+          func,
+          result,
+          ...contexts,
+        });
+      });
+  }
+
+  ipcServer.on('evalWindow', ({
+    resolve,
+    reject,
+    payload: {
+      windowId,
+      func,
+      args = [],
+    },
+  }) => {
+    const window = electron.BrowserWindow.fromId(windowId);
+    if (!window) {
       reject(new Error(`Can not find window '${windowId}'`));
       return;
     }
-    if (win.isDestroyed()) {
+    if (window.isDestroyed()) {
       reject(new Error(`Window '${windowId}' is destroyed`));
       return;
     }
-    return win;
-  }
-
-  ipc.on('evalWindow', ({
-    resolve,
-    reject,
-    payload: {
-      windowId,
-      func,
-      args = [],
-    },
-  }) => {
-    const win = findWindow(reject, windowId);
-    if (win) {
-      const fn = win[func];
-      if (typeof (fn) !== 'function') {
-        reject(new Error(`Notfound function '${func}'`));
-        return;
-      }
-      const ret = fn.apply(win, args);
-      Promise.resolve(ret)
-        .catch(reject)
-        .then((result) => {
-          resolve({
-            windowId,
-            func,
-            result,
-          });
-        });
+    if (window) {
+      evalHostFunc(resolve, reject, window, func, args, { windowId });
     }
   });
 
-  ipc.on('evalWebContent', ({
+  ipcServer.on('evalWebContents', ({
     resolve,
     reject,
     payload: {
-      windowId,
+      webContentsId,
       func,
       args = [],
     },
   }) => {
-    const win = findWindow(reject, windowId);
-    if (win) {
-      const fn = win.webContents[func];
-      if (typeof (fn) !== 'function') {
-        reject(new Error(`Notfound function '${func}'`));
-        return;
-      }
-      const ret = fn.apply(win.webContents, args);
-      Promise.resolve(ret)
-        .catch(reject)
-        .then((result) => {
-          resolve({
-            windowId,
-            func,
-            result,
-          });
-        });
+    const contents = electron.webContents.fromId(webContentsId);
+    if (!contents) {
+      reject(new Error(`Can not find webContents '${webContentsId}'`));
+      return;
+    }
+    if (contents.isDestroyed()) {
+      reject(new Error(`webContents '${webContentsId}' is destroyed`));
+      return;
+    }
+    if (contents) {
+      evalHostFunc(resolve, reject, contents, func, args, { webContentsId });
     }
   });
 
@@ -127,7 +163,7 @@ function init({
     }
   });
 
-  ipc.on('runQuery', ({
+  ipcServer.on('runQuery', ({
     resolve,
     reject,
     payload: {
@@ -158,9 +194,7 @@ function init({
     }
   });
 
-  ipc.start();
+  ipcServer.start();
 }
 
-module.exports = {
-  init,
-};
+module.exports = init;
