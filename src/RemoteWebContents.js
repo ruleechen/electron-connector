@@ -66,7 +66,7 @@ class RemoteWebContents extends RemoteEvents {
   runQuery(queryScript) {
     return this._ipcClient.send({
       action: 'runQuery',
-      windowId: this.id,
+      webContentsId: this.id,
       queryScript,
     });
   }
