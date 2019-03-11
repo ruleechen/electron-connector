@@ -5,7 +5,7 @@ const del = require('del');
 const fse = require('fs-extra');
 const Connector = require('./Connector');
 
-const backupNamePostfix = '_rcbak';
+const backupNamePostfix = '_ecbak';
 const appBuildDirName = 'ec-asar';
 const proxyFileTemplate = path.resolve(__dirname, './proxy.js');
 

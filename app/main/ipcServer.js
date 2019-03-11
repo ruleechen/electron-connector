@@ -1,5 +1,5 @@
 const os = require('os');
-const electron = require("electron");
+const electron = require('electron');
 const scriptTpls = require('./scriptTpls');
 
 function init({
@@ -91,15 +91,7 @@ function init({
       });
   }
 
-  ipcServer.on('evalWindow', ({
-    resolve,
-    reject,
-    payload: {
-      windowId,
-      func,
-      args = [],
-    },
-  }) => {
+  function findWindow(windowId, reject) {
     const window = electron.BrowserWindow.fromId(windowId);
     if (!window) {
       reject(new Error(`Can not find window '${windowId}'`));
@@ -109,6 +101,32 @@ function init({
       reject(new Error(`Window '${windowId}' is destroyed`));
       return;
     }
+    return window;
+  }
+
+  function findWebContents(webContentsId, reject) {
+    const contents = electron.webContents.fromId(webContentsId);
+    if (!contents) {
+      reject(new Error(`Can not find webContents '${webContentsId}'`));
+      return;
+    }
+    if (contents.isDestroyed()) {
+      reject(new Error(`webContents '${webContentsId}' is destroyed`));
+      return;
+    }
+    return contents;
+  }
+
+  ipcServer.on('evalWindow', ({
+    resolve,
+    reject,
+    payload: {
+      windowId,
+      func,
+      args = [],
+    },
+  }) => {
+    const window = findWindow(windowId, reject);
     if (window) {
       evalHostFunc(resolve, reject, window, func, args, { windowId });
     }
@@ -123,15 +141,7 @@ function init({
       args = [],
     },
   }) => {
-    const contents = electron.webContents.fromId(webContentsId);
-    if (!contents) {
-      reject(new Error(`Can not find webContents '${webContentsId}'`));
-      return;
-    }
-    if (contents.isDestroyed()) {
-      reject(new Error(`webContents '${webContentsId}' is destroyed`));
-      return;
-    }
+    const contents = findWebContents(webContentsId, reject);
     if (contents) {
       evalHostFunc(resolve, reject, contents, func, args, { webContentsId });
     }
@@ -167,12 +177,12 @@ function init({
     resolve,
     reject,
     payload: {
-      windowId,
+      webContentsId,
       queryScript,
     },
   }) => {
-    const win = findWindow(resolve, windowId);
-    if (win) {
+    const contents = findWebContents(webContentsId, reject);
+    if (contents) {
       // timeout
       const queryId = Math.random().toString().substr(2);
       const timeoutId = setTimeout(() => {
@@ -190,7 +200,7 @@ function init({
         scriptTpls.tpl_sendback(),
         scriptTpls.tpl_query(queryId, queryScript),
       ];
-      win.webContents.executeJavaScript(scripts.join(os.EOL));
+      contents.executeJavaScript(scripts.join(os.EOL));
     }
   });
 

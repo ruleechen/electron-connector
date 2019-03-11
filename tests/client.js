@@ -7,7 +7,7 @@ const mainWindowIndex = 0;
 
 sdk.getWindows()
   .then((wins) => (
-    wins[mainWindowIndex].executeScript('alert("hello everyone!")')
+    wins[mainWindowIndex].webContents.executeScript('alert("hello everyone!")')
   ))
   .catch((err) => {
     console.error(err);
@@ -59,7 +59,7 @@ sdk.getWindows()
         .webContents
         .executeScript(insertHtmlScript)
         .then(() => (
-          wins[mainWindowIndex].executeScript(phoneScript)
+          wins[mainWindowIndex].webContents.executeScript(phoneScript)
         ))
         .then((res) => {
           console.log(res);

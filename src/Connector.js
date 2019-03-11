@@ -6,6 +6,7 @@ const cp = require('child_process');
 class Connector {
   constructor(brand) {
     this.brading(brand);
+    this._logger = console;
   }
 
   get src() {
@@ -49,7 +50,7 @@ class Connector {
     // install
     const cmd = `cd ${this.src} && yarn install`;
     cp.execSync(cmd, { stdio: 'inherit' });
-    console.log('[Connector] yarn installed');
+    this._logger.log('[Connector] yarn installed');
     // clear
     fse.ensureDirSync(this.src);
     del.sync([this.brandDest], { force: true });
@@ -58,7 +59,7 @@ class Connector {
       this.brandDest,
       JSON.stringify(this._brandInfo, null, 2)
     );
-    console.log('[Connector] brand saved');
+    this._logger.log('[Connector] brand saved');
   }
 }
 
