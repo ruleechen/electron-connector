@@ -2,9 +2,10 @@ const os = require('os');
 const electron = require('electron');
 const scriptTpls = require('./scriptTpls');
 
-function init({
-  ipcClient,
+function initIpc({
   ipcServer,
+  ipcClient,
+  logger,
 }) {
   ipcServer.on('getWindows', ({
     resolve,
@@ -39,7 +40,7 @@ function init({
           eventArgs: args,
           ...contexts,
         }).catch((error) => {
-          console.error(error);
+          logger.error(error);
         });
       };
     }
@@ -156,10 +157,13 @@ function init({
     _ec_query_id,
     _ec_callback_id,
     _ec_result,
+    ...payload
   }) => {
+    // ec query
     if (
-      _ec_action === '_ec_query'
-      && _ec_query_id && _ec_callback_id
+      _ec_action === '_ec_query' &&
+      _ec_query_id &&
+      _ec_callback_id
     ) {
       const query = queryContexts[_ec_query_id];
       if (query) {
@@ -169,6 +173,28 @@ function init({
       }
       event.sender.send(_ec_callback_id, {
         success: true,
+      });
+    }
+    // common used
+    else if (
+      _ec_callback_id &&
+      !_ec_query_id
+    ) {
+      ipcClient.send({
+        ...payload,
+      }).then((res) => {
+        event.sender.send(_ec_callback_id, res || {
+          success: true,
+        });
+      }).catch((err) => {
+        let error = err;
+        if (err instanceof Error) {
+          error = err.toString();
+        }
+        event.sender.send(_ec_callback_id, {
+          success: false,
+          error,
+        });
       });
     }
   });
@@ -197,6 +223,7 @@ function init({
       };
       // execute script
       const scripts = [
+        scriptTpls.tpl_getIpcRenderer(),
         scriptTpls.tpl_sendback(),
         scriptTpls.tpl_query(queryId, queryScript),
       ];
@@ -204,7 +231,14 @@ function init({
     }
   });
 
-  ipcServer.start();
+  setInterval(() => {
+    ipcClient.send({
+      action: 'heartbeat',
+      timestamp: Date.now(),
+    }).catch((error) => {
+      logger.error(error);
+    });
+  }, 5 * 1024);
 }
 
-module.exports = init;
+module.exports = initIpc;

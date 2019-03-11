@@ -1,21 +1,21 @@
-const IpcEmitter = require('./ipc');
+const { IpcServer, IpcClient } = require('./ipc');
 const RemoteWindow = require('./RemoteWindow');
 const RemoteWebContents = require('./RemoteWebContents');
 
-class IpcSdk {
+class RemoteSdk {
   constructor({
-    localPort,
-    remotePort,
+    localNetworkPort,
+    remoteNetworkPort,
     silent = true,
     remoteWindowImpl = RemoteWindow,
     remoteWebContentsImpl = RemoteWebContents,
     logger = console,
   }) {
-    if (IpcSdk.validateInteger(localPort)) {
-      throw new Error(`localPort is required a integer`);
+    if (RemoteSdk.validateInteger(localNetworkPort)) {
+      throw new Error(`localNetworkPort is required a integer`);
     }
-    if (IpcSdk.validateInteger(remotePort)) {
-      throw new Error(`remotePort is required a integer`);
+    if (RemoteSdk.validateInteger(remoteNetworkPort)) {
+      throw new Error(`remoteNetworkPort is required a integer`);
     }
     if (!remoteWindowImpl) {
       throw new Error(`remoteWindowImpl is required`);
@@ -39,20 +39,20 @@ class IpcSdk {
     this._remoteWebContentsImpl = remoteWebContentsImpl;
     this._logger = logger;
 
-    // for sending request to host
-    this._ipcClient = new IpcEmitter({
-      networkPort: remotePort,
+    // for receiving data from host
+    this._ipcServer = new IpcServer({
+      networkPort: localNetworkPort,
       silent,
     });
 
-    // for receiving data from host
-    this._ipcServer = new IpcEmitter({
-      networkPort: localPort,
+    // for sending request to host
+    this._ipcClient = new IpcClient({
+      networkPort: remoteNetworkPort,
       silent,
     });
 
     // handler remote events
-    this.on('_ec_remote_events', ({
+    this.ipcServer.on('_ec_remote_events', ({
       resolve,
       reject,
       payload,
@@ -82,14 +82,10 @@ class IpcSdk {
     return this._ipcServer;
   }
 
-  on(action, handler) {
-    this._ipcServer.on(action, handler);
-  }
-
   getWindows() {
     const RemoteWindowImpl = this._remoteWindowImpl;
     const RemoteWebContentsImpl = this._remoteWebContentsImpl;
-    return this._ipcClient.send({
+    return this.ipcClient.send({
       action: 'getWindows',
     }).then((wins) => {
       this._logger.log(wins);
@@ -126,6 +122,11 @@ class IpcSdk {
       host.emit.apply(host, applyArgs);
     }
   }
+
+  destroy() {
+    this.ipcClient.destroy();
+    this.ipcServer.destroy();
+  }
 }
 
-module.exports = IpcSdk;
+module.exports = RemoteSdk;

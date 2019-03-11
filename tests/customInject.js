@@ -1,5 +1,5 @@
 const path = require('path');
-const { AsarInjector } = require('../');
+const { AsarInjector } = require('../index');
 
 // (required) the target asar
 const archive = 'C:/Users/rulee.chen/AppData/Local/Microsoft/Teams/current/resources/app.asar';

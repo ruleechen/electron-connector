@@ -1,4 +1,4 @@
-const { AsarInjector, Connector } = require('../');
+const { AsarInjector, Connector } = require('../index');
 const path = require('path');
 const brand = require('./brand');
 

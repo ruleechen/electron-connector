@@ -1,34 +1,157 @@
 const EventEmitter = require('events');
 const { IPC } = require('node-ipc');
 
-class IpcEmitter extends EventEmitter {
+class IpcBase extends EventEmitter {
   constructor({
     networkPort,
     silent = false,
-    sendTimeout = 15 * 1024,
-    idleTimtout = 1 * 1024,
     logger = console,
   }) {
     super();
-    // parameters
-    this._sendTimeout = sendTimeout;
-    this._idleTimtout = idleTimtout;
-    this._eventName = 'commandline';
     this._logger = logger;
-    // config ipc
-    this._ipc = new IPC();
-    this._ipcId = `ec-${networkPort}`;
-    Object.assign(this._ipc.config, {
-      id: this._ipcId,
+    this._defaultChannel = 'default-channel';
+    // inter process communication id
+    this._innerIpcId = `ec-${networkPort}`;
+    this._innerIpc = new IPC();
+    Object.assign(this._innerIpc.config, {
+      id: this._innerIpcId,
       networkPort,
       silent,
+    });
+  }
+
+  get logger() {
+    return this._logger;
+  }
+
+  get defaultChannel() {
+    return this._defaultChannel;
+  }
+
+  get innerIpcId() {
+    return this._innerIpcId;
+  }
+
+  get innerIpc() {
+    return this._innerIpc;
+  }
+}
+
+/*****************************************************************************/
+class IpcServer extends IpcBase {
+  constructor({
+    networkPort,
+    silent,
+    logger,
+  }) {
+    super({
+      networkPort,
+      silent,
+      logger,
     });
     // caches
     this._requests = {};
   }
 
-  get interProcessCommunicationId() {
-    return this._ipcId;
+  _initServer() {
+    this.innerIpc.serve(() => {
+      this.innerIpc.server.on(this.defaultChannel, ({
+        action,
+        _ec_request_id,
+        ...payload
+      }, socket) => {
+        new Promise((resolve, reject) => {
+          this._requests[_ec_request_id] = {
+            resolve,
+            reject,
+          };
+          try {
+            this.emit(action, {
+              resolve,
+              reject,
+              payload,
+            });
+          } catch (err) {
+            reject({
+              action,
+              error: err && err.toString(),
+              success: false,
+            });
+          }
+        }).then((result) => {
+          delete this._requests[_ec_request_id];
+          this.innerIpc.server.emit(socket, _ec_request_id, result || {
+            action,
+            success: true,
+          });
+        }).catch((error) => {
+          delete this._requests[_ec_request_id];
+          let err = error;
+          if (err instanceof Error) {
+            err = {
+              action,
+              success: false,
+              error: err.toString(),
+            };
+          }
+          this.innerIpc.server.emit(socket, _ec_request_id, err);
+        });
+      });
+      this.innerIpc.server.on('error', (error) => {
+        this.logger.error('[ipc server]', error);
+      });
+    });
+  }
+
+  _terminateRequests() {
+    Object.keys(this._requests).forEach((requestId) => {
+      const request = this._requests[requestId];
+      request.reject({
+        error: 'terminated',
+        success: false,
+      });
+    });
+  }
+
+  start() {
+    this._initServer();
+    if (this.innerIpc.server) {
+      this.innerIpc.server.start();
+      this.logger.info('[ipc server] started');
+    }
+  }
+
+  destroy() {
+    this._terminateRequests();
+    if (this.innerIpc.server) {
+      this.innerIpc.server.stop();
+      this.logger.info('[ipc server] stopped');
+    }
+  }
+}
+
+/*****************************************************************************/
+class IpcClient extends IpcBase {
+  constructor({
+    networkPort,
+    silent,
+    logger,
+    sendTimeout = 15 * 1024,
+    idleTimtout = 1 * 1024,
+  }) {
+    super({
+      networkPort,
+      silent,
+      logger,
+    });
+    // parameters
+    this._sendTimeout = sendTimeout;
+    this._idleTimtout = idleTimtout;
+    // caches
+    this._requests = {};
+    this._idleTimtoutId = null;
+    this._currentConnection = null;
+    this._connectionPromise = null;
   }
 
   send({
@@ -38,6 +161,7 @@ class IpcEmitter extends EventEmitter {
     if (!action) {
       throw new Error('action is required');
     }
+    clearTimeout(this._idleTimtoutId);
     return this._acquireConnection().then((connection) => (
       new Promise((resolve, reject) => {
         // request id
@@ -74,26 +198,25 @@ class IpcEmitter extends EventEmitter {
           }
         });
         // send request
-        connection.emit(this._eventName, {
+        connection.emit(this.defaultChannel, {
           ...payload,
           action,
-          _ec_callback_id: requestId,
+          _ec_request_id: requestId,
         });
       })
     ));
   }
 
   _acquireConnection() {
-    clearTimeout(this._idleTimtoutId);
     if (this._currentConnection) {
       return Promise.resolve(this._currentConnection);
     }
     if (this._connectionPromise) {
       return Promise.resolve(this._connectionPromise);
     }
-    this._connectionPromise = new Promise((resolve, reject) => {
-      this._ipc.connectTo(this._ipcId, () => {
-        const connection = this._ipc.of[this._ipcId];
+    this._connectionPromise = new Promise((resolve) => {
+      this.innerIpc.connectTo(this.innerIpcId, () => {
+        const connection = this.innerIpc.of[this.innerIpcId];
         connection.on('connect', () => {
           this._currentConnection = connection;
           this._connectionPromise = null;
@@ -103,7 +226,7 @@ class IpcEmitter extends EventEmitter {
           this._currentConnection = null;
         });
         connection.on('error', (error) => {
-          reject(error);
+          this.logger.error('[ipc client]', error);
         });
       });
     });
@@ -114,7 +237,7 @@ class IpcEmitter extends EventEmitter {
     const deleted = delete this._requests[requestId];
     if (!Object.keys(this._requests).length) {
       this._idleTimtoutId = setTimeout(() => {
-        this._ipc.disconnect(this._ipcId);
+        this.innerIpc.disconnect(this.innerIpcId);
         this._currentConnection = null;
       }, this._idleTimtout);
     }
@@ -122,7 +245,7 @@ class IpcEmitter extends EventEmitter {
   }
 
   _terminateRequests() {
-    this._ipc.disconnect(this._ipcId);
+    this.innerIpc.disconnect(this.innerIpcId);
     Object.keys(this._requests).forEach((requestId) => {
       const request = this._requests[requestId];
       delete this._requests[requestId];
@@ -134,65 +257,12 @@ class IpcEmitter extends EventEmitter {
     });
   }
 
-  _initServer() {
-    this._ipc.serve(() => {
-      this._ipc.server.on(this._eventName, ({
-        action,
-        _ec_callback_id,
-        ...payload
-      }, socket) => {
-        new Promise((resolve, reject) => {
-          try {
-            this.emit(action, {
-              resolve,
-              reject,
-              payload,
-            });
-          } catch (err) {
-            reject({
-              action,
-              error: err && err.toString(),
-              success: false,
-            });
-          }
-        }).then((result) => {
-          this._ipc.server.emit(socket, _ec_callback_id, result || {
-            action,
-            success: true,
-          });
-        }).catch((error) => {
-          let err = error;
-          if (err instanceof Error) {
-            err = {
-              action,
-              success: false,
-              error: err.toString(),
-            };
-          }
-          this._ipc.server.emit(socket, _ec_callback_id, err);
-        });
-      });
-    });
-  }
-
-  start() {
-    this._initServer();
-    if (this._ipc.server) {
-      this._ipc.server.start();
-      this._logger.info('[ipc server] started');
-      this._ipc.server.on('error', (error) => {
-        this._logger.error(`[ipc server] ${error}`);
-      });
-    }
-  }
-
   destroy() {
     this._terminateRequests();
-    if (this._ipc.server) {
-      this._ipc.server.stop();
-      this._logger.info('[ipc server] stopped');
-    }
   }
 }
 
-module.exports = IpcEmitter;
+module.exports = {
+  IpcServer,
+  IpcClient,
+};

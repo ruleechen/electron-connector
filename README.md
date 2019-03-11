@@ -80,46 +80,32 @@ injector
 RemoteWindow is a remote controller for target electron BrowserWindow
 - Regular functions like show/hide/close/inspect are supported
 - Extends to RemoteWindow and more functions as needed
-- Events will supported (coming soon...)
+- Electron events transition supported
 
 ```js
-const { IpcSdk } = require('electron-connector');
+const { RemoteSdk } = require('electron-connector');
 const brand = require('./brand');
 
-const sdk = new IpcSdk({
-  localPort: brand.networkPort + 1,
-  remotePort: brand.networkPort,
+const sdk = new RemoteSdk({
+  localNetworkPort: brand.networkPort + 1,
+  remoteNetworkPort: brand.networkPort,
 });
 
 sdk.getWindows()
   .then((wins) => {
-    wins[0].inspect();
-    wins[0].executeScript('alert("hello everyone!")');
+    wins[0].webContents.inspect();
+    wins[0].webContents.executeScript('alert("hello everyone!")');
   })
   .catch((err) => {
     console.error(err);
   });
-```
 
-## Receive Electron Events
-
-- Setup a remote server for receiving target electron events
-
-```js
-const { IpcSdk } = require('electron-connector');
-const brand = require('./brand');
-
-const sdk = new IpcSdk({
-  localPort: brand.networkPort + 1,
-  remotePort: brand.networkPort,
-});
-
-sdk.on('heartbeat', ({
+// Receive Electron Events
+sdk.ipcServer.on('heartbeat', ({
   resolve,
   payload,
 }) => {
-  console.log('heartbeat --------------------');
-  console.log(payload);
+  console.log('heartbeat', payload);
   resolve();
 });
 

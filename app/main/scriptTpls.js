@@ -1,5 +1,30 @@
 const trimPlus = require('../lib/trimPlus');
 
+function tpl_getIpcRenderer() {
+  return `
+    function _ec_getIpcRenderer() {
+      let result;
+      // for common electron app
+      if (window.require) {
+        try {
+          const electron = window.require('electron');
+          if (electron) {
+            result = electron.ipcRenderer;
+          }
+        } catch (ex) {
+          // ignore ex
+        }
+      }
+      // for MS Teams specified
+      if (!result) {
+        result = window.electronSafeIpc;
+      }
+      // ret
+      return result;
+    }
+  `;
+}
+
 function tpl_sendback() {
   return `
     function _ec_sendBack({
@@ -8,7 +33,7 @@ function tpl_sendback() {
       resolve: resolveFn = res => res,
       timeout = 10 * 1000,
     }) {
-      const ipcRenderer = window.electronSafeIpc;
+      const ipcRenderer = _ec_getIpcRenderer();
       return new Promise((resolve, reject) => {
         let timeoutId;
         const callbackId = Math.random().toString().substr(2);
@@ -70,6 +95,7 @@ function tpl_query(queryId, queryScript) {
 }
 
 module.exports = {
+  tpl_getIpcRenderer,
   tpl_sendback,
   tpl_query,
 };

@@ -1,8 +1,6 @@
 const sdk = require('./sdk');
 
-//---------------------------------------------------------------------
-
-sdk.on('heartbeat', ({
+sdk.ipcServer.on('heartbeat', ({
   resolve,
   payload,
 }) => {

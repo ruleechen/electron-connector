@@ -1,33 +1,40 @@
 const electron = require('electron');
+const settings = require('./settings');
+const { IpcServer, IpcClient } = require('./ipc');
+const initIpc = require('./initIpc');
 const brand = require('../brand');
-const IpcEmitter = require('./ipc');
-const initIpcServer = require('./ipcServer');
-const initIpcClient = require('./ipcClient');
 
 electron.app.on('ready', () => {
-  const ipcClient = new IpcEmitter({
-    networkPort: brand.remoteNetworkPort,
+  const logger = console;
+
+  const localNetworkPort = (
+    settings.appSettings.get('msteamsLocalNetworkPort') ||
+    brand.localNetworkPort
+  );
+
+  const remoteNetworkPort = (
+    settings.appSettings.get('msteamsRemoteNetworkPort') ||
+    brand.remoteNetworkPort
+  );
+
+  const ipcServer = new IpcServer({
+    networkPort: localNetworkPort,
+    logger,
   });
 
-  const ipcServer = new IpcEmitter({
-    networkPort: brand.localNetworkPort,
+  const ipcClient = new IpcClient({
+    networkPort: remoteNetworkPort,
+    logger,
   });
 
   try {
-    initIpcServer({
-      ipcClient,
+    initIpc({
       ipcServer,
-    });
-  } catch (ex) {
-    console.error(`[ipcServer] init failed: ${ex}`);
-  }
-
-  try {
-    initIpcClient({
       ipcClient,
-      ipcServer,
+      logger,
     });
+    ipcServer.start();
   } catch (ex) {
-    console.error(`[ipcClient] init failed: ${ex}`);
+    logger.error('[ipc] init failed', ex);
   }
 });
