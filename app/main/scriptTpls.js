@@ -1,5 +1,18 @@
 const trimPlus = require('../lib/trimPlus');
 
+function tpl_executeJavaScript(scriptContent) {
+  return `
+    new Promise((resolve, reject) => {
+      try {
+        ${scriptContent}
+        resolve('executed');
+      } catch (ex) {
+        reject(ex);
+      }
+    })
+  `;
+}
+
 function tpl_getIpcRenderer() {
   return `
     function _ec_getIpcRenderer() {
@@ -95,6 +108,7 @@ function tpl_query(queryId, queryScript) {
 }
 
 module.exports = {
+  tpl_executeJavaScript,
   tpl_getIpcRenderer,
   tpl_sendback,
   tpl_query,

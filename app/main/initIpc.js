@@ -52,26 +52,32 @@ function initIpc({
       reject(new Error(`Notfound '${func}'`));
       return;
     }
-    const isNewEvent = (
-      func === 'on' ||
-      func === 'addListener'
-    );
-    const isRemoveEvent = (
-      func === 'off' ||
-      func === 'removeListener'
-    );
     let applyArgs = args;
-    if (isNewEvent || isRemoveEvent) {
-      const eventName = args[0];
-      const handler = getRemoteEventsHandler(host, eventName, contexts);
-      // prevent duplicated event handler
-      if (isNewEvent) {
-        const listeners = host.listeners(eventName);
-        if (listeners.indexOf(handler) !== -1) {
-          host.removeListener(eventName, handler);
+    if (func === 'executeJavaScript') {
+      const scriptContent = args[0];
+      // workaround issue: https://github.com/electron/electron/issues/9102
+      applyArgs = [scriptTpls.tpl_executeJavaScript(scriptContent)];
+    } else {
+      const isNewEvent = (
+        func === 'on' ||
+        func === 'addListener'
+      );
+      const isRemoveEvent = (
+        func === 'off' ||
+        func === 'removeListener'
+      );
+      if (isNewEvent || isRemoveEvent) {
+        const eventName = args[0];
+        const handler = getRemoteEventsHandler(host, eventName, contexts);
+        applyArgs = [eventName, handler];
+        // prevent duplicated event handler
+        if (isNewEvent) {
+          const listeners = host.listeners(eventName);
+          if (listeners.indexOf(handler) !== -1) {
+            host.removeListener(eventName, handler);
+          }
         }
       }
-      applyArgs = [eventName, handler];
     }
     let ret = host[func];
     if (typeof (ret) === 'function') {
