@@ -43,12 +43,14 @@ class RemoteSdk {
     this._ipcServer = new IpcServer({
       networkPort: localNetworkPort,
       silent,
+      logger,
     });
 
     // for sending request to host
     this._ipcClient = new IpcClient({
       networkPort: remoteNetworkPort,
       silent,
+      logger,
     });
 
     // handler remote events
@@ -58,9 +60,9 @@ class RemoteSdk {
       payload,
     }) => {
       try {
-        this._logger.log('_ec_remote_events', payload);
-        this._remoteEventsHandler(payload);
-        resolve();
+        this._handleRemoteEvents(payload)
+          .then(resolve)
+          .catch(reject);
       } catch (ex) {
         reject(ex);
       }
@@ -82,29 +84,34 @@ class RemoteSdk {
     return this._ipcServer;
   }
 
+  getRawWindows() {
+    return this.ipcClient.send({
+      action: 'getWindows',
+    });
+  }
+
   getWindows() {
     const RemoteWindowImpl = this._remoteWindowImpl;
     const RemoteWebContentsImpl = this._remoteWebContentsImpl;
-    return this.ipcClient.send({
-      action: 'getWindows',
-    }).then((wins) => {
-      this._logger.log(wins);
-      return wins;
-    }).then((wins) => (
-      wins.map((win) => new RemoteWindowImpl({
+    return this.getRawWindows().then((wins) => {
+      this._currentWindows = wins.map((win) => new RemoteWindowImpl({
+        id: win.windowId,
+        title: win.windowTitle,
+        ipcServer: this.ipcServer,
         ipcClient: this.ipcClient,
-        windowId: win.id,
         webContents: new RemoteWebContentsImpl({
+          id: win.webContentsId,
+          title: win.webContentsTitle,
+          ipcServer: this.ipcServer,
           ipcClient: this.ipcClient,
-          webContentsId: win.webContentsId,
         }),
-      }))
-    )).then((remoteWindows) => (
-      this._currentWindows = remoteWindows
-    ));
+      }));
+      this._logger.log(wins);
+      return this._currentWindows;
+    });
   }
 
-  _remoteEventsHandler({
+  _handleRemoteEvents({
     windowId,
     webContentsId,
     eventName,
@@ -112,15 +119,17 @@ class RemoteSdk {
   }) {
     let host;
     if (windowId || windowId === 0) {
-      host = (this._currentWindows || []).filter(x => x.id === windowId);
+      host = (this._currentWindows || []).find(x => x.id === windowId);
     }
     if (webContentsId || webContentsId === 0) {
-      host = (this._currentWindows || []).filter(x => x.webContents.id === webContentsId);
+      host = (this._currentWindows || []).find(x => x.webContents.id === webContentsId);
     }
     if (host) {
       const applyArgs = [eventName, ...eventArgs];
       host.emit.apply(host, applyArgs);
+      return Promise.resolve({ emited: true });
     }
+    return Promise.reject(new Error('Event target notfound'));
   }
 
   destroy() {

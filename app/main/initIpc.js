@@ -16,8 +16,8 @@ function initIpc({
       .forEach((win) => {
         if (win && !win.isDestroyed()) {
           wins.push({
-            id: win.id,
-            title: win.getTitle(),
+            windowId: win.id,
+            windowTitle: win.getTitle(),
             webContentsId: (win.webContents && win.webContents.id),
             webContentsTitle: (win.webContents && win.webContents.getTitle()),
           });

@@ -2,19 +2,27 @@ const RemoteEvents = require('./RemoteEvents');
 
 class RemoteWebContents extends RemoteEvents {
   constructor({
+    id,
+    title,
+    ipcServer,
     ipcClient,
-    webContentsId,
     logger = console,
   }) {
     super({
       logger,
     });
+    this._id = id;
+    this._title = title;
+    this._ipcServer = ipcServer;
     this._ipcClient = ipcClient;
-    this._webContentsId = webContentsId;
   }
 
   get id() {
-    return this._webContentsId;
+    return this._id;
+  }
+
+  get title() {
+    return this._title;
   }
 
   _eval({

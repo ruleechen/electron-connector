@@ -2,21 +2,29 @@ const RemoteEvents = require('./RemoteEvents');
 
 class RemoteWindow extends RemoteEvents {
   constructor({
+    id,
+    title,
+    ipcServer,
     ipcClient,
-    windowId,
     webContents,
     logger = console,
   }) {
     super({
       logger,
     });
+    this._id = id;
+    this._title = title;
+    this._ipcServer = ipcServer;
     this._ipcClient = ipcClient;
-    this._windowId = windowId;
     this._webContents = webContents;
   }
 
   get id() {
-    return this._windowId;
+    return this._id;
+  }
+
+  get title() {
+    return this._title;
   }
 
   get webContents() {
@@ -62,7 +70,7 @@ class RemoteWindow extends RemoteEvents {
   getBounds() {
     return this._eval({
       func: 'getBounds',
-    })
+    });
   }
 }
 
