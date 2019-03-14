@@ -1,9 +1,9 @@
-const { RemoteSdk } = require('../index');
+const { RemoteSDK } = require('../index');
 const brand = require('./brand');
 
-const sdk = new RemoteSdk({
+const connector = RemoteSDK.connect({
   localNetworkPort: brand.networkPort + 1,
   remoteNetworkPort: brand.networkPort,
 });
 
-module.exports = sdk;
+module.exports = connector;

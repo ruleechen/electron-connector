@@ -2,7 +2,7 @@ const { IpcServer, IpcClient } = require('./ipc');
 const RemoteWindow = require('./RemoteWindow');
 const RemoteWebContents = require('./RemoteWebContents');
 
-class RemoteSdk {
+class RemoteConnector {
   constructor({
     localNetworkPort,
     remoteNetworkPort,
@@ -11,10 +11,10 @@ class RemoteSdk {
     remoteWebContentsImpl = RemoteWebContents,
     logger = console,
   }) {
-    if (RemoteSdk.validateInteger(localNetworkPort)) {
+    if (RemoteConnector.validateInteger(localNetworkPort)) {
       throw new Error(`localNetworkPort is required a integer`);
     }
-    if (RemoteSdk.validateInteger(remoteNetworkPort)) {
+    if (RemoteConnector.validateInteger(remoteNetworkPort)) {
       throw new Error(`remoteNetworkPort is required a integer`);
     }
     if (!remoteWindowImpl) {
@@ -138,4 +138,4 @@ class RemoteSdk {
   }
 }
 
-module.exports = RemoteSdk;
+module.exports = RemoteConnector;

@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const sdk = require('./sdk');
+const connector = require('./connector');
 
 //---------------------------------------------------------------------
 const mainWindowIndex = 0;
 
-sdk.getWindows()
+connector.getWindows()
   .then((wins) => (
     wins[mainWindowIndex].webContents.executeScript('alert("hello everyone!")')
   ))
@@ -38,7 +38,7 @@ const insertHtmlScript = `
 const filePath = path.resolve(__dirname, './rcphone.js');
 const phoneScript = fs.readFileSync(filePath, { encoding: 'utf8' });
 
-sdk.getWindows()
+connector.getWindows()
   .then((wins) => (
     Promise.all([
       wins[mainWindowIndex]

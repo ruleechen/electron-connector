@@ -83,15 +83,15 @@ RemoteWindow is a remote controller for target electron BrowserWindow
 - Electron events transition supported
 
 ```js
-const { RemoteSdk } = require('electron-connector');
+const { RemoteSDK } = require('electron-connector');
 const brand = require('./brand');
 
-const sdk = new RemoteSdk({
+const connector = RemoteSDK.connect({
   localNetworkPort: brand.networkPort + 1,
   remoteNetworkPort: brand.networkPort,
 });
 
-sdk.getWindows()
+connector.getWindows()
   .then((wins) => {
     wins[0].webContents.inspect();
     wins[0].webContents.executeScript('alert("hello everyone!")');
@@ -101,7 +101,7 @@ sdk.getWindows()
   });
 
 // Receive Electron Events
-sdk.ipcServer.on('heartbeat', ({
+connector.ipcServer.on('heartbeat', ({
   resolve,
   payload,
 }) => {
@@ -109,5 +109,5 @@ sdk.ipcServer.on('heartbeat', ({
   resolve();
 });
 
-sdk.ipcServer.start();
+connector.ipcServer.start();
 ```

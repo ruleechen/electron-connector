@@ -4,7 +4,8 @@ const { IpcServer, IpcClient } = require('./src/ipc');
 const RemoteEvents = require('./src/RemoteEvents');
 const RemoteWindow = require('./src/RemoteWindow');
 const RemoteWebContents = require('./src/RemoteWebContents');
-const RemoteSdk = require('./src/RemoteSdk');
+const RemoteConnector = require('./src/RemoteConnector');
+const RemoteSDK = require('./src/RemoteSDK');
 
 module.exports = {
   AsarInjector,
@@ -14,5 +15,6 @@ module.exports = {
   RemoteEvents,
   RemoteWindow,
   RemoteWebContents,
-  RemoteSdk,
+  RemoteConnector,
+  RemoteSDK,
 };

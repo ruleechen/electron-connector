@@ -1,6 +1,6 @@
-const sdk = require('./sdk');
+const connector = require('./connector');
 
-sdk.ipcServer.on('heartbeat', ({
+connector.ipcServer.on('heartbeat', ({
   resolve,
   payload,
 }) => {
@@ -8,7 +8,7 @@ sdk.ipcServer.on('heartbeat', ({
   resolve();
 });
 
-sdk.getWindows()
+connector.getWindows()
   .then((wins) => {
     wins.forEach((win) => {
       win.on('close', () => {
@@ -20,4 +20,4 @@ sdk.getWindows()
     console.error(err);
   });
 
-sdk.ipcServer.start();
+connector.ipcServer.start();
