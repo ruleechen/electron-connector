@@ -7,23 +7,23 @@ const brand = require('../brand');
 electron.app.on('ready', () => {
   const logger = console;
 
-  const localNetworkPort = (
-    settings.appSettings.get('msteamsLocalNetworkPort') ||
-    brand.localNetworkPort
+  const localServerPort = (
+    settings.appSettings.get('msteamsLocalServerPort') ||
+    brand.localServerPort
   );
 
-  const remoteNetworkPort = (
-    settings.appSettings.get('msteamsRemoteNetworkPort') ||
-    brand.remoteNetworkPort
+  const remoteServerPort = (
+    settings.appSettings.get('msteamsRemoteServerPort') ||
+    brand.remoteServerPort
   );
 
   const ipcServer = new IpcServer({
-    networkPort: localNetworkPort,
+    networkPort: localServerPort,
     logger,
   });
 
   const ipcClient = new IpcClient({
-    networkPort: remoteNetworkPort,
+    networkPort: remoteServerPort,
     logger,
   });
 

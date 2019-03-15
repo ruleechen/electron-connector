@@ -4,18 +4,18 @@ const RemoteWebContents = require('./RemoteWebContents');
 
 class RemoteConnector {
   constructor({
-    localNetworkPort,
-    remoteNetworkPort,
-    silent = true,
+    localServerPort,
+    remoteServerPort,
+    ipcSilent = false,
     remoteWindowImpl = RemoteWindow,
     remoteWebContentsImpl = RemoteWebContents,
     logger = console,
   }) {
-    if (RemoteConnector.validateInteger(localNetworkPort)) {
-      throw new Error(`localNetworkPort is required a integer`);
+    if (RemoteConnector.validateInteger(localServerPort)) {
+      throw new Error(`localServerPort is required a integer`);
     }
-    if (RemoteConnector.validateInteger(remoteNetworkPort)) {
-      throw new Error(`remoteNetworkPort is required a integer`);
+    if (RemoteConnector.validateInteger(remoteServerPort)) {
+      throw new Error(`remoteServerPort is required a integer`);
     }
     if (!remoteWindowImpl) {
       throw new Error(`remoteWindowImpl is required`);
@@ -37,19 +37,20 @@ class RemoteConnector {
     }
     this._remoteWindowImpl = remoteWindowImpl;
     this._remoteWebContentsImpl = remoteWebContentsImpl;
+    this._latestWindows = [];
     this._logger = logger;
 
     // for receiving data from host
     this._ipcServer = new IpcServer({
-      networkPort: localNetworkPort,
-      silent,
+      networkPort: localServerPort,
+      silent: ipcSilent,
       logger,
     });
 
     // for sending request to host
     this._ipcClient = new IpcClient({
-      networkPort: remoteNetworkPort,
-      silent,
+      networkPort: remoteServerPort,
+      silent: ipcSilent,
       logger,
     });
 
@@ -76,6 +77,10 @@ class RemoteConnector {
     );
   }
 
+  get logger() {
+    return this._logger;
+  }
+
   get ipcClient() {
     return this._ipcClient;
   }
@@ -84,31 +89,38 @@ class RemoteConnector {
     return this._ipcServer;
   }
 
+  get latestWindows() {
+    return this._latestWindows;
+  }
+
   getRawWindows() {
     return this.ipcClient.send({
       action: 'getWindows',
+    }).then((wins) => {
+      this.logger.log(wins);
+      return wins;
     });
   }
 
   getWindows() {
     const RemoteWindowImpl = this._remoteWindowImpl;
     const RemoteWebContentsImpl = this._remoteWebContentsImpl;
-    return this.getRawWindows().then((wins) => {
-      this._currentWindows = wins.map((win) => new RemoteWindowImpl({
+    return this.getRawWindows().then((wins) => (
+      this._latestWindows = wins.map((win) => new RemoteWindowImpl({
         id: win.windowId,
         title: win.windowTitle,
         ipcServer: this.ipcServer,
         ipcClient: this.ipcClient,
+        logger: this.logger,
         webContents: new RemoteWebContentsImpl({
           id: win.webContentsId,
           title: win.webContentsTitle,
           ipcServer: this.ipcServer,
           ipcClient: this.ipcClient,
+          logger: this.logger,
         }),
-      }));
-      this._logger.log(wins);
-      return this._currentWindows;
-    });
+      }))
+    ));
   }
 
   _handleRemoteEvents({
@@ -119,10 +131,10 @@ class RemoteConnector {
   }) {
     let host;
     if (windowId || windowId === 0) {
-      host = (this._currentWindows || []).find(x => x.id === windowId);
+      host = this.latestWindows.find(x => x.id === windowId);
     }
     if (webContentsId || webContentsId === 0) {
-      host = (this._currentWindows || []).find(x => x.webContents.id === webContentsId);
+      host = this.latestWindows.find(x => x.webContents.id === webContentsId);
     }
     if (host) {
       const applyArgs = [eventName, ...eventArgs];

@@ -15,8 +15,8 @@ const injector = new AsarInjector({
 
 const connector = new Connector({
   applicationId: brand.brandAppId,
-  localNetworkPort: brand.networkPort,
-  remoteNetworkPort: brand.networkPort + 1,
+  localServerPort: brand.networkPort,
+  remoteServerPort: brand.networkPort + 1,
 });
 
 injector

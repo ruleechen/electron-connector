@@ -1,3 +1,4 @@
+const EmptyLogger = require('./EmptyLogger');
 const RemoteWindow = require('./RemoteWindow');
 const RemoteWebContents = require('./RemoteWebContents');
 const RemoteConnector = require('./RemoteConnector');
@@ -29,15 +30,16 @@ class RemoteSDK {
   }
 
   static connect({
-    localNetworkPort,
-    remoteNetworkPort,
-    silent = true,
+    localServerPort,
+    remoteServerPort,
+    verbose = false,
+    ipcSilent = false,
   }) {
     return new RemoteConnector({
-      localNetworkPort,
-      remoteNetworkPort,
-      silent,
-      logger: RemoteSDK.logger(),
+      localServerPort,
+      remoteServerPort,
+      ipcSilent: (ipcSilent || !verbose),
+      logger: verbose ? RemoteSDK.logger() : EmptyLogger,
       remoteWindowImpl: RemoteSDK.remoteWindowImpl(),
       remoteWebContentsImpl: RemoteSDK.remoteWebContentsImpl(),
     });

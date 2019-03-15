@@ -23,24 +23,24 @@ class Connector {
 
   brading({
     applicationId = 'com.electronconnector.default',
-    localNetworkPort = 13110,
-    remoteNetworkPort = 13111,
+    localServerPort = 13110,
+    remoteServerPort = 13111,
   } = {}) {
     // merge
     const brandInfo = Object.assign(this._brandInfo || {}, {
       applicationId,
-      localNetworkPort,
-      remoteNetworkPort,
+      localServerPort,
+      remoteServerPort,
     });
     // verify
     if (!brandInfo.applicationId) {
       throw new Error('applicationId is required');
     }
-    if (!brandInfo.localNetworkPort) {
-      throw new Error('localNetworkPort is required');
+    if (!brandInfo.localServerPort) {
+      throw new Error('localServerPort is required');
     }
-    if (!brandInfo.remoteNetworkPort) {
-      throw new Error('remoteNetworkPort is required');
+    if (!brandInfo.remoteServerPort) {
+      throw new Error('remoteServerPort is required');
     }
     // set
     this._brandInfo = brandInfo;

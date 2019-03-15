@@ -17,6 +17,7 @@ class IpcBase extends EventEmitter {
       id: this._innerIpcId,
       networkPort,
       silent,
+      logger: this.logger.log.bind(this.logger),
     });
   }
 

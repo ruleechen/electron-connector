@@ -62,8 +62,8 @@ const injector = new AsarInjector({
 
 const connector = new Connector({
   applicationId: brand.brandAppId,
-  localNetworkPort: brand.networkPort,
-  remoteNetworkPort: brand.networkPort + 1,
+  localServerPort: brand.networkPort,
+  remoteServerPort: brand.networkPort + 1,
 });
 
 injector
@@ -87,8 +87,8 @@ const { RemoteSDK } = require('electron-connector');
 const brand = require('./brand');
 
 const connector = RemoteSDK.connect({
-  localNetworkPort: brand.networkPort + 1,
-  remoteNetworkPort: brand.networkPort,
+  localServerPort: brand.networkPort + 1,
+  remoteServerPort: brand.networkPort,
 });
 
 connector.getWindows()
