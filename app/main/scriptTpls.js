@@ -95,7 +95,7 @@ function tpl_query(queryId, queryScript) {
           payload: {
             _ec_action: '_ec_query',
             _ec_query_id: '${queryId}',
-            _ec_result: data,
+            _ec_query_result: data,
           },
         })
       )).then((res) => {

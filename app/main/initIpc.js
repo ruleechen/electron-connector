@@ -161,8 +161,8 @@ function initIpc({
   electron.ipcMain.on('perf', (event, {
     _ec_action,
     _ec_query_id,
+    _ec_query_result,
     _ec_callback_id,
-    _ec_result,
     ...payload
   }) => {
     // ec query
@@ -175,10 +175,12 @@ function initIpc({
       if (query) {
         delete queryContexts[_ec_query_id];
         clearTimeout(query.timeoutId);
-        query.resolve(_ec_result);
+        query.resolve(_ec_query_result);
       }
       event.sender.send(_ec_callback_id, {
         success: true,
+        queryId: _ec_query_id,
+        queryRes: _ec_query_result,
       });
     }
     // common used
