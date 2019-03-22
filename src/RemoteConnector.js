@@ -1,4 +1,4 @@
-const { IpcServer, IpcClient } = require('./ipc');
+const { IpcServer, IpcClient } = require('../app/lib/ipc');
 const RemoteWindow = require('./RemoteWindow');
 const RemoteWebContents = require('./RemoteWebContents');
 

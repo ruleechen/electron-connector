@@ -7,7 +7,6 @@ const Connector = require('./Connector');
 
 const backupNamePostfix = '_ecbak';
 const appBuildDirName = 'ec-asar';
-const proxyFileTemplate = path.resolve(__dirname, './proxy.js');
 
 const defaultAsarUnpack = '**/node_modules/**/*.+(dll|node)';
 const defaultProxyNameDest = 'ec-proxy.js';
@@ -94,16 +93,12 @@ class AsarInjector {
         return;
       }
 
-      // proxy content 1
-      let proxyContent = fse.readFileSync(proxyFileTemplate, { encoding: 'utf8' });
-      proxyContent = proxyContent.replace('{mainfile}', packageJson.main);
-
-      // proxy content 2
+      // proxy content
       const injectionBaseName = `ec_${path.basename(injectionSrc)}`;
-      const injectionLine = `require('./${injectionBaseName}');`
-      if (proxyContent.toLowerCase().indexOf(injectionLine.toLowerCase()) === -1) {
-        proxyContent += `${injectionLine}${os.EOL}`;
-      }
+      const proxyContent = [
+        `require('./${packageJson.main}');`,
+        `require('./${injectionBaseName}');`
+      ].join(os.EOL);
 
       // detect proxy file dest
       const proxyFileDest = path.resolve(this._appBuildDir, `./${this._proxyNameDest}`);

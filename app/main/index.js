@@ -1,6 +1,6 @@
 const electron = require('electron');
 const settings = require('./settings');
-const { IpcServer, IpcClient } = require('./ipc');
+const { IpcServer, IpcClient } = require('../lib/ipc');
 const initIpc = require('./initIpc');
 const brand = require('../brand');
 
