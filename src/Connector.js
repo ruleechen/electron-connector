@@ -53,7 +53,8 @@ class Connector {
     this._logger.log('[Connector] yarn installed');
     // clear
     fse.ensureDirSync(this.src);
-    del.sync([this.brandDest], { force: true });
+    const removed = del.sync([this.brandDest], { force: true });
+    this._logger.log(`[Connector] ${removed.length} cleaned`);
     // build
     fse.writeFileSync(
       this.brandDest,

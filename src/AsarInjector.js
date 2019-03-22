@@ -126,7 +126,11 @@ class AsarInjector {
       this.backup();
 
       // pack asar
-      del.sync([this._asarSrc], { force: true });
+      try {
+        del.sync([this._asarSrc], { force: true });
+      } catch (ex) {
+        // ignore
+      }
       asar.createPackageWithOptions(this._appBuildDir, this._asarSrc, {
         // https://github.com/electron/asar/blob/2ec15c1c4537842bdd488a5006bfdee13808fafc/lib/asar.js
         // https://www.npmjs.com/package/minimatch
