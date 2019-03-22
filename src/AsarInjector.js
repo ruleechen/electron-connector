@@ -59,9 +59,8 @@ class AsarInjector {
     if (isBak) {
       return archive;
     }
-    const ext = path.extname(archive);
     const appDir = AsarInjector.getAppDir(archive, path.dirname(archive));
-    return `${appDir}${backupNamePostfix}${ext}`;
+    return `${appDir}${backupNamePostfix}`;
   }
 
   backup() {
