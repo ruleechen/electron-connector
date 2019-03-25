@@ -3,6 +3,7 @@ const path = require('path');
 const asar = require('asar');
 const del = require('del');
 const fse = require('fs-extra');
+const AdmZip = require('adm-zip');
 const Connector = require('./Connector');
 
 const backupNamePostfix = '_ecbak';
@@ -65,14 +66,17 @@ class AsarInjector {
   backup() {
     if (!fse.existsSync(this._asarBakSrc)) {
       // By default, dest is overwritten
-      fse.copyFileSync(this._asarSrc, this._asarBakSrc);
+      const zip = new AdmZip();
+      zip.addLocalFile(this._asarSrc);
+      zip.writeZip(this._asarBakSrc);
     }
   }
 
   recover() {
     if (fse.existsSync(this._asarBakSrc)) {
       // By default, dest is overwritten
-      fse.copyFileSync(this._asarBakSrc, this._asarSrc);
+      const zip = new AdmZip(this._asarBakSrc);
+      zip.extractAllTo(path.dirname(this._asarSrc), true);
     }
   }
 
