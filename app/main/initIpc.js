@@ -1,6 +1,7 @@
 const os = require('os');
 const electron = require('electron');
 const scriptTpls = require('./scriptTpls');
+const ipcChannels = require('./ipcChannels');
 
 function initIpc({
   ipcServer,
@@ -157,16 +158,27 @@ function initIpc({
   /* query ****************************************************/
 
   const queryContexts = {};
-
-  electron.ipcMain.on('perf', (event, {
+  const ipcEventHandler = (event, {
     _ec_action,
     _ec_query_id,
     _ec_query_result,
+    _ec_test_channel,
     _ec_callback_id,
     ...payload
   }) => {
-    // ec query
+    // ec test
     if (
+      _ec_action === '_ec_test_channel' &&
+      _ec_test_channel &&
+      _ec_callback_id
+    ) {
+      event.sender.send(_ec_callback_id, {
+        success: true,
+        channel: _ec_test_channel,
+      });
+    }
+    // ec query
+    else if (
       _ec_action === '_ec_query' &&
       _ec_query_id &&
       _ec_callback_id
@@ -205,6 +217,10 @@ function initIpc({
         });
       });
     }
+  };
+
+  ipcChannels.forEach((channel) => {
+    electron.ipcMain.on(channel, ipcEventHandler);
   });
 
   ipcServer.on('runQuery', ({
@@ -232,6 +248,7 @@ function initIpc({
       // execute script
       const scripts = [
         scriptTpls.tpl_getIpcRenderer(),
+        scriptTpls.tpl_getIpcChannel(),
         scriptTpls.tpl_sendback(),
         scriptTpls.tpl_query(queryId, queryScript),
       ];

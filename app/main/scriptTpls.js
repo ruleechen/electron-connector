@@ -1,4 +1,5 @@
 const trimPlus = require('../lib/trimPlus');
+const ipcChannels = require('./ipcChannels');
 
 function tpl_executeJavaScript(scriptContent) {
   return `
@@ -38,10 +39,41 @@ function tpl_getIpcRenderer() {
   `;
 }
 
+function tpl_getIpcChannel() {
+  const channels = ipcChannels.join(',');
+  return `
+    function _ec_getIpcChannel() {
+      return new Promise((resolve, reject) => {
+        if (window._ec_channel) {
+          resolve(window._ec_channel);
+          return;
+        }
+        const channels = '${channels}'.split(',');
+        Promise.race(
+          channels.map((channel) => (
+            _ec_sendBack({
+              channel,
+              payload: {
+                _ec_action: '_ec_test_channel',
+                _ec_test_channel: channel,
+              },
+            })
+          ))
+        )
+        .then((res) => {
+          window._ec_channel = res.channel;
+          resolve(res.channel);
+        })
+        .catch(reject);
+      });
+    }
+  `;
+}
+
 function tpl_sendback() {
   return `
     function _ec_sendBack({
-      channel = 'perf',
+      channel,
       payload = {},
       resolve: resolveFn = res => res,
       timeout = 10 * 1000,
@@ -76,10 +108,15 @@ function tpl_sendback() {
             });
           }, timeout);
         }
-        ipcRenderer.send(channel, {
-          ...payload,
-          _ec_callback_id: callbackId,
-        });
+        const channelPromise = channel
+          ? Promise.resolve(channel)
+          : _ec_getIpcChannel();
+        channelPromise.then((ipcChannel) => {
+          ipcRenderer.send(ipcChannel, {
+            ...payload,
+            _ec_callback_id: callbackId,
+          });
+        }).catch(reject);
       });
     };
   `;
@@ -110,6 +147,7 @@ function tpl_query(queryId, queryScript) {
 module.exports = {
   tpl_executeJavaScript,
   tpl_getIpcRenderer,
+  tpl_getIpcChannel,
   tpl_sendback,
   tpl_query,
 };
