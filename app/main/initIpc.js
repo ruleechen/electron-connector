@@ -172,11 +172,13 @@ function initIpc({
       _ec_test_channel &&
       _ec_callback_id
     ) {
-      rendererIpcChannel = _ec_test_channel;
       event.sender.send(_ec_callback_id, {
         success: true,
         channel: _ec_test_channel,
       });
+      if (!rendererIpcChannel) {
+        rendererIpcChannel = _ec_test_channel;
+      }
     }
     // ec query
     else if (

@@ -29,6 +29,13 @@ function tpl_getIpcRenderer() {
           // ignore ex
         }
       }
+      // for auto generated
+      if (!result) {
+        result = window._ec_ipcRenderer;
+      }
+      if (!result) {
+        result = window._ec_electron && window._ec_electron.ipcRenderer;
+      }
       // for MS Teams specified
       if (!result) {
         result = window.electronSafeIpc;
@@ -44,8 +51,8 @@ function tpl_getIpcChannel() {
   return `
     function _ec_getIpcChannel() {
       return new Promise((resolve, reject) => {
-        if (window._ec_channel) {
-          resolve(window._ec_channel);
+        if (window._ec_ipc_channel) {
+          resolve(window._ec_ipc_channel);
           return;
         }
         const channels = '${channels}'.split(',');
@@ -61,7 +68,7 @@ function tpl_getIpcChannel() {
           ))
         )
         .then((res) => {
-          window._ec_channel = res.channel;
+          window._ec_ipc_channel = res.channel;
           resolve(res.channel);
         })
         .catch(reject);
