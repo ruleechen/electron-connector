@@ -75,11 +75,11 @@ injector
   });
 ```
 
-## RemoteWindow of Connector
+## RemoteWindow/RemoteWebContents of Connector
 
 RemoteWindow is a remote controller for target electron BrowserWindow
 - Regular functions like show/hide/close/inspect are supported
-- Extends to RemoteWindow and more functions as needed
+- Extends classes (RemoteWindow/RemoteWebContents) to add more functions as needed
 - Electron events transition supported
 
 ```js
@@ -110,4 +110,27 @@ connector.ipcServer.on('heartbeat', ({
 });
 
 connector.ipcServer.start();
+```
+
+## Extends RemoteWindow/RemoteWebContents
+
+```js
+const { RemoteSDK, RemoteWindow } = require('electron-connector');
+
+class MyRemoteWindow extends RemoteWindow {
+  getBounds() {
+    return this._eval({
+      func: 'getBounds',
+    });
+  }
+
+  setBounds(bounds) {
+    return this._eval({
+      func: 'setBounds',
+      args: [bounds],
+    });
+  }
+}
+
+RemoteSDK.remoteWindowImpl(MyRemoteWindow);
 ```

@@ -66,12 +66,6 @@ class RemoteWindow extends RemoteEvents {
       func: 'close',
     });
   }
-
-  getBounds() {
-    return this._eval({
-      func: 'getBounds',
-    });
-  }
 }
 
 module.exports = RemoteWindow;

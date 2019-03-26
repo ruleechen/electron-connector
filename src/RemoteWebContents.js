@@ -49,7 +49,6 @@ class RemoteWebContents extends RemoteEvents {
     });
   }
 
-
   inspect(mode = 'detach') {
     return this._eval({
       func: 'openDevTools',

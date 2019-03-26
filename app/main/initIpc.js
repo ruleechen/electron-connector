@@ -156,7 +156,7 @@ function initIpc({
   });
 
   /* query ****************************************************/
-
+  let rendererIpcChannel;
   const queryContexts = {};
   const ipcEventHandler = (event, {
     _ec_action,
@@ -172,6 +172,7 @@ function initIpc({
       _ec_test_channel &&
       _ec_callback_id
     ) {
+      rendererIpcChannel = _ec_test_channel;
       event.sender.send(_ec_callback_id, {
         success: true,
         channel: _ec_test_channel,
@@ -260,6 +261,7 @@ function initIpc({
     ipcClient.send({
       action: 'heartbeat',
       timestamp: Date.now(),
+      rendererIpcChannel,
     }).catch((error) => {
       logger.error(error);
     });
