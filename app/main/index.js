@@ -1,6 +1,7 @@
 const electron = require('electron');
 const settings = require('./settings');
 const { IpcServer, IpcClient } = require('../lib/ipc');
+const initPreload = require('./initPreload');
 const initIpc = require('./initIpc');
 const brand = require('../brand');
 
@@ -36,5 +37,13 @@ electron.app.on('ready', () => {
     ipcServer.start();
   } catch (ex) {
     logger.error('[ipc] init failed', ex);
+  }
+
+  try {
+    initPreload({
+      logger,
+    });
+  } catch (ex) {
+    logger.error('[preload] init failed', ex);
   }
 });

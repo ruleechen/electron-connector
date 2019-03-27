@@ -5,7 +5,6 @@ const del = require('del');
 const fse = require('fs-extra');
 const AdmZip = require('adm-zip');
 const Connector = require('./Connector');
-const { hookPreload } = require('./CodeHooks');
 
 const backupNamePostfix = '_ecbak';
 const appBuildDirName = 'ec-asar';
@@ -90,71 +89,66 @@ class AsarInjector {
       del.sync([this._appBuildDir], { force: true });
       asar.extractAll(this._asarSrc, this._appBuildDir);
 
-      // run code hooks
-      Promise.all([
-        hookPreload(this._appBuildDir),
-      ]).then(() => {
-        // detect proxy entry
-        const packageJsonFile = path.resolve(this._appBuildDir, './package.json');
-        const packageJson = require(packageJsonFile);
-        if (packageJson.main === this._proxyNameDest) {
-          reject(new Error(`Proxy entry already exists '${packageJson.main}'`));
+      // detect proxy entry
+      const packageJsonFile = path.resolve(this._appBuildDir, './package.json');
+      const packageJson = require(packageJsonFile);
+      if (packageJson.main === this._proxyNameDest) {
+        reject(new Error(`Proxy entry already exists '${packageJson.main}'`));
+        return;
+      }
+
+      // proxy content
+      const injectionBaseName = `ec_${path.basename(injectionSrc)}`;
+      const proxyContent = [
+        `require('./${packageJson.main}');`,
+        `require('./${injectionBaseName}');`
+      ].join(os.EOL);
+
+      // detect proxy file dest
+      const proxyFileDest = path.resolve(this._appBuildDir, `./${this._proxyNameDest}`);
+      if (fse.existsSync(proxyFileDest)) {
+        reject(new Error(`Proxy file already exists '${this._proxyNameDest}'`));
+        return;
+      }
+
+      // detect injection dest
+      const injectionDest = path.resolve(this._appBuildDir, `./${injectionBaseName}`);
+      if (fse.pathExistsSync(injectionDest)) {
+        reject(new Error(`Injection source already exists '${injectionBaseName}'`));
+        return;
+      }
+
+      // apply (proxy + injection)
+      fse.writeFileSync(proxyFileDest, proxyContent);
+      fse.copySync(injectionSrc, injectionDest, { recursive: true, overwrite: true });
+
+      // update main
+      packageJson.main = this._proxyNameDest;
+      fse.writeFileSync(packageJsonFile, JSON.stringify(packageJson, null, 2), { overwrite: true });
+
+      // backup if needed
+      this.backup();
+
+      // pack asar
+      try {
+        del.sync([this._asarSrc], { force: true });
+      } catch (ex) {
+        // ignore
+      }
+      asar.createPackageWithOptions(this._appBuildDir, this._asarSrc, {
+        // https://github.com/electron/asar/blob/2ec15c1c4537842bdd488a5006bfdee13808fafc/lib/asar.js
+        // https://www.npmjs.com/package/minimatch
+        unpack: this._asarUnpack,
+      }, (err) => {
+        if (err) {
+          this.recover();
+          reject(err);
           return;
         }
-
-        // proxy content
-        const injectionBaseName = `ec_${path.basename(injectionSrc)}`;
-        const proxyContent = [
-          `require('./${packageJson.main}');`,
-          `require('./${injectionBaseName}');`
-        ].join(os.EOL);
-
-        // detect proxy file dest
-        const proxyFileDest = path.resolve(this._appBuildDir, `./${this._proxyNameDest}`);
-        if (fse.existsSync(proxyFileDest)) {
-          reject(new Error(`Proxy file already exists '${this._proxyNameDest}'`));
-          return;
-        }
-
-        // detect injection dest
-        const injectionDest = path.resolve(this._appBuildDir, `./${injectionBaseName}`);
-        if (fse.pathExistsSync(injectionDest)) {
-          reject(new Error(`Injection source already exists '${injectionBaseName}'`));
-          return;
-        }
-
-        // apply (proxy + injection)
-        fse.writeFileSync(proxyFileDest, proxyContent);
-        fse.copySync(injectionSrc, injectionDest, { recursive: true, overwrite: true });
-
-        // update main
-        packageJson.main = this._proxyNameDest;
-        fse.writeFileSync(packageJsonFile, JSON.stringify(packageJson, null, 2), { overwrite: true });
-
-        // backup if needed
-        this.backup();
-
-        // pack asar
-        try {
-          del.sync([this._asarSrc], { force: true });
-        } catch (ex) {
-          // ignore
-        }
-        asar.createPackageWithOptions(this._appBuildDir, this._asarSrc, {
-          // https://github.com/electron/asar/blob/2ec15c1c4537842bdd488a5006bfdee13808fafc/lib/asar.js
-          // https://www.npmjs.com/package/minimatch
-          unpack: this._asarUnpack,
-        }, (err) => {
-          if (err) {
-            this.recover();
-            reject(err);
-            return;
-          }
-          resolve({
-            asar: this._asarSrc,
-            build: this._appBuildDir,
-            injected: injectionSrc,
-          });
+        resolve({
+          asar: this._asarSrc,
+          build: this._appBuildDir,
+          injected: injectionSrc,
         });
       });
     });

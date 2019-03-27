@@ -25,7 +25,6 @@
     "asar": "^0.14.6",
     "del": "^3.0.0",
     "fs-extra": "^7.0.1",
-    "node-dir": "^0.1.17",
     "node-ipc": "^9.1.1"
   },
   "devDependencies": {
